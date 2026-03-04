@@ -10,8 +10,10 @@
     <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     
     <style>
+        /* 🎨 ธีมหลัก สีชมพูพาสเทล */
         :root { --bs-primary: #fb7185; --bs-body-bg: #fff0f5; --bs-font-sans-serif: 'Prompt', sans-serif; }
         body { font-family: var(--bs-font-sans-serif); background-color: var(--bs-body-bg); color: #475569; -webkit-tap-highlight-color: transparent; overflow-x: hidden; }
+        
         .btn-primary { background-color: var(--bs-primary); border-color: var(--bs-primary); color: white; }
         .btn-primary:hover { background-color: #f43f5e; border-color: #f43f5e; color: white;}
         .text-primary { color: var(--bs-primary) !important; }
@@ -33,7 +35,7 @@
         .settings-tab .nav-link { color: #64748b; font-weight: 600; border-radius: 1rem; padding: 10px 15px; margin-bottom: 5px; }
         .settings-tab .nav-link.active { background-color: var(--bs-primary); color: white; }
 
-        /* 🚀 Custom Overlay Modals (ทะลุจอ 100%) */
+        /* 🚀 Custom Overlay Modals */
         .custom-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(5px); z-index: 99999; display: flex; align-items: center; justify-content: center; padding: 20px; opacity: 0; pointer-events: none; transition: opacity 0.2s; }
         .custom-overlay.show { opacity: 1; pointer-events: auto; }
         .custom-modal-box { background: white; width: 100%; max-width: 400px; border-radius: 2rem; padding: 25px; box-shadow: 0 25px 50px rgba(0,0,0,0.25); transform: scale(0.9) translateY(20px); transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); max-height: 90vh; overflow-y: auto; }
@@ -100,8 +102,7 @@
         
         <div class="container sticky-top bg-light py-2" style="top: 73px; z-index: 1020;">
             <ul class="nav nav-pills nav-fill bg-white rounded-pill shadow-sm border p-1" id="adminTabs" role="tablist">
-                <li class="nav-item"><button class="nav-link active rounded-pill fw-bold px-2 py-2" data-bs-toggle="pill" data-bs-target="#v-kitchen" style="font-size: 0.85rem;">🔥 ทานร้าน</button></li>
-                <li class="nav-item"><button class="nav-link rounded-pill fw-bold px-2 py-2" data-bs-toggle="pill" data-bs-target="#v-preorder" style="font-size: 0.85rem;">⏰ พรีออเดอร์</button></li>
+                <li class="nav-item"><button class="nav-link active rounded-pill fw-bold px-2 py-2" data-bs-toggle="pill" data-bs-target="#v-kitchen" style="font-size: 0.85rem;">🔥 ครัว (คิวทั้งหมด)</button></li>
                 <li class="nav-item"><button class="nav-link rounded-pill fw-bold px-2 py-2" data-bs-toggle="pill" data-bs-target="#v-cashier" style="font-size: 0.85rem;">💰 POS</button></li>
                 <li class="nav-item admin-only d-none"><button class="nav-link rounded-pill fw-bold px-2 py-2" data-bs-toggle="pill" data-bs-target="#v-settings" style="font-size: 0.85rem;">⚙️ ตั้งค่า</button></li>
             </ul>
@@ -110,13 +111,10 @@
         <div class="tab-content flex-grow-1 p-3">
             
             <div class="tab-pane fade show active" id="v-kitchen">
-                <h6 class="fw-bold text-secondary mb-3"><span class="fs-5">🍽️</span> คิวทานที่ร้าน</h6>
-                <div id="kitchen-regular-list" class="d-flex flex-column gap-3"></div>
-            </div>
-            
-            <div class="tab-pane fade" id="v-preorder">
-                <h6 class="fw-bold text-warning mb-3"><span class="fs-5">⏰</span> คิวสั่งล่วงหน้า (ระบุชื่อลูกค้า)</h6>
-                <div id="kitchen-preorder-list" class="d-flex flex-column gap-3"></div>
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h6 class="fw-bold text-secondary mb-0"><span class="fs-5">📋</span> ลำดับคิวห้องครัวทั้งหมด</h6>
+                </div>
+                <div id="kitchen-all-list" class="d-flex flex-column gap-2"></div>
             </div>
 
             <div class="tab-pane fade" id="v-cashier">
@@ -200,7 +198,7 @@
         let posActiveTable = '', isStoreOpen = true, currentUserRole = 'customer';
         let soundEnabled = false, knownOrders = new Set(), isFirstLoad = true;
 
-        // 🚨 ดัก Error พิมพ์ออกหน้าจอทันที
+        // 🚨 ดัก Error
         window.onerror = function(msg, url, lineNo) {
             document.getElementById('auth-loading').classList.add('d-none');
             document.getElementById('auth-status').innerHTML = '<span class="text-danger">เกิดข้อผิดพลาด</span>';
@@ -212,7 +210,7 @@
 
         window.showToast = (msg) => { document.getElementById('toast-msg').textContent = msg; new bootstrap.Toast(document.getElementById('liveToast')).show(); };
 
-        // 🎵 ระบบเสียง AI Voice ที่ปรับปรุงใหม่
+        // 🎵 ระบบเสียง AI (พูดโต้ตอบแบบธรรมชาติ)
         window.toggleSoundAlert = () => {
             const audio = document.getElementById('dingdong-sound'); soundEnabled = true; 
             if(audio) { audio.volume = 0; audio.play().catch(e => console.log("Silent catch audio")); }
@@ -341,7 +339,7 @@
             else { document.getElementById('fab-cart-container').classList.add('d-none'); document.getElementById('cart-count').classList.add('d-none'); }
         }
 
-        // 🌟 ส่งออเดอร์เข้าครัว และแยกลงฐานข้อมูล Pre-order อัตโนมัติ
+        // 🌟 ส่งออเดอร์เข้าครัว และแยกลงฐานข้อมูล
         window.submitOrderFinal = async () => {
             const list = Object.values(sharedCart); if(list.length === 0) return;
             const btn = document.getElementById('btn-final-confirm'); btn.disabled = true; btn.innerHTML = `กำลังส่ง...`; 
@@ -413,7 +411,7 @@
         window.saveTopping = () => { const id = document.getElementById('t-edit-id').value || 't' + Date.now(); const name = document.getElementById('t-name').value; const price = document.getElementById('t-price').value; if(!name || !price) return showToast("⚠️ ข้อมูลไม่ครบ"); set(ref(db, `toppings/${id}`), { id, name, price: Number(price) }); window.cancelTopEdit(); showToast("✅ บันทึกท็อปปิ้งแล้ว");};
         window.delTopping = id => { if(confirm('ลบท็อปปิ้ง?')) remove(ref(db, `toppings/${id}`)); };
 
-        // 👨‍🍳 ครัว (อัปเดตเสียงตามการแยกประเภท)
+        // 👨‍🍳 ครัว (รวมคิวอัจฉริยะ)
         window.updateOrderStatus = (tKey, id, status, isPre, cName) => {
             update(ref(db, `orders/${tKey}/${id}`), {status: status});
             if (status === 'preparing') { 
@@ -427,37 +425,33 @@
         };
 
         window.renderKitchen = () => {
-            let regQ = [], preQ = [];
+            let allQ = [];
             Object.entries(allOrders).forEach(([tKey, orders]) => { 
                 Object.entries(orders).forEach(([id, item]) => { 
                     if (item.status !== 'done') { 
-                        let o = { tKey, id, ...item }; 
-                        if (item.is_preorder) preQ.push(o); else regQ.push(o); 
+                        allQ.push({ tKey, id, ...item }); 
                     } 
                 }); 
             });
-            regQ.sort((a,b) => a.created_at - b.created_at); preQ.sort((a,b) => a.created_at - b.created_at);
+            allQ.sort((a,b) => a.created_at - b.created_at);
 
-            const buildQ = (list, isPreorderList) => {
-                let html = '';
-                list.forEach((item, index) => {
-                    let btn = '';
-                    if (item.status === 'pending') btn = `<button onclick="window.updateOrderStatus('${item.tKey}', '${item.id}', 'preparing', ${item.is_preorder}, '${item.customer_name}')" class="btn btn-sm btn-outline-primary fw-bold rounded-pill px-3">📥 รับทำ</button>`;
-                    else if (item.status === 'preparing') btn = `<button onclick="window.updateOrderStatus('${item.tKey}', '${item.id}', 'done', ${item.is_preorder}, '${item.customer_name}')" class="btn btn-sm btn-success fw-bold rounded-pill px-3 shadow-sm">✅ เสร็จ</button>`;
-                    
-                    const timeTag = item.pickup_time ? `<div class="badge bg-warning text-dark mt-1 border border-warning">⏰ รับ: ${item.pickup_time}</div>` : '';
-                    const titleTag = isPreorderList ? `คุณ ${item.customer_name}` : `โต๊ะ ${item.tKey}`;
-                    
-                    html += `<div class="card border-0 shadow-sm rounded-4 mb-2"><div class="card-body p-3 d-flex justify-content-between align-items-center"><div class="d-flex align-items-center gap-3"><div class="bg-light rounded-circle d-flex align-items-center justify-content-center fw-bold text-secondary border" style="width:35px;height:35px;">${index + 1}</div><div><div class="fw-bold text-primary small lh-1 mb-1">${titleTag}</div><div class="fw-bold text-dark lh-sm">${item.menu_name} <span class="text-secondary ms-1">x${item.quantity}</span></div>${timeTag}</div></div>${btn}</div></div>`;
-                }); return html;
-            };
+            let html = '';
+            allQ.forEach((item, index) => {
+                let btn = '';
+                if (item.status === 'pending') btn = `<button onclick="window.updateOrderStatus('${item.tKey}', '${item.id}', 'preparing', ${item.is_preorder}, '${item.customer_name}')" class="btn btn-sm btn-outline-primary fw-bold rounded-pill px-3">📥 รับทำ</button>`;
+                else if (item.status === 'preparing') btn = `<button onclick="window.updateOrderStatus('${item.tKey}', '${item.id}', 'done', ${item.is_preorder}, '${item.customer_name}')" class="btn btn-sm btn-success fw-bold rounded-pill px-3 shadow-sm">✅ เสร็จ</button>`;
+                
+                const timeTag = item.is_preorder && item.pickup_time ? `<div class="badge bg-warning text-dark mt-2 border border-warning fs-6">⏰ รับเวลา: ${item.pickup_time}</div>` : '';
+                const titleTag = item.is_preorder ? `พรีออเดอร์: คุณ ${item.customer_name}` : `โต๊ะ: ${item.tKey}`;
+                const badgeClass = item.is_preorder ? 'bg-warning-subtle text-dark border-warning' : 'bg-primary-subtle text-primary border-primary';
 
-            document.getElementById('kitchen-preorder-container').classList.toggle('d-none', preQ.length === 0);
-            document.getElementById('kitchen-preorder-list').innerHTML = buildQ(preQ, true);
-            document.getElementById('kitchen-regular-list').innerHTML = buildQ(regQ, false) || '<div class="text-center py-5 text-secondary fw-bold bg-white rounded-4 border shadow-sm">ว่างครับ ☕</div>';
+                html += `<div class="card border-0 shadow-sm rounded-4 mb-2"><div class="card-body p-3 d-flex justify-content-between align-items-center"><div class="d-flex align-items-center gap-3"><div class="bg-light rounded-circle d-flex align-items-center justify-content-center fw-bold text-secondary border" style="width:40px;height:40px;font-size:1.2rem;">${index + 1}</div><div><div class="fw-bold small lh-1 mb-1 border rounded px-2 py-1 d-inline-block ${badgeClass}">${titleTag}</div><div class="fw-bold text-dark lh-sm mt-1 fs-6">${item.menu_name} <span class="text-secondary ms-1">x${item.quantity}</span></div>${timeTag}</div></div>${btn}</div></div>`;
+            }); 
+
+            document.getElementById('kitchen-all-list').innerHTML = html || '<div class="text-center py-5 text-secondary fw-bold bg-white rounded-4 border shadow-sm">ครัวว่างครับ พักผ่อนได้เลย ☕</div>';
         }
 
-        // 💰 POS & Cashier (รองรับรายชื่อพรีออเดอร์อัตโนมัติ)
+        // 💰 POS & Cashier
         window.renderCashier = () => {
             const t = document.getElementById('adm-c-table').value; const items = Object.entries(allOrders[t] || {}); let sum = 0, html = '';
             items.forEach(([key, i]) => { 
@@ -467,7 +461,7 @@
             });
             document.getElementById('adm-checkout-list').innerHTML = html || '<div class="text-center text-secondary py-3 fw-bold">ยังไม่มีรายการ</div>'; document.getElementById('adm-c-total').textContent = `฿${sum}`; document.getElementById('adm-btn-clear').disabled = items.length === 0;
             
-            // อัปเดตรายชื่อโต๊ะใน Dropdown (ให้มีชื่อพรีออเดอร์เข้าไปด้วย)
+            // อัปเดตรายชื่อโต๊ะใน Dropdown
             const selectEl = document.getElementById('adm-c-table');
             const currentVal = selectEl.value;
             let optionsHtml = `<option value="โต๊ะ 1">โต๊ะ 1</option><option value="โต๊ะ 2">โต๊ะ 2</option><option value="โต๊ะ 3">โต๊ะ 3</option><option value="โต๊ะ 4">โต๊ะ 4</option><option value="โต๊ะ 5">โต๊ะ 5</option><option value="โต๊ะ 6">โต๊ะ 6</option><option value="โต๊ะ 7">โต๊ะ 7</option><option value="โต๊ะ 8">โต๊ะ 8</option><option value="ซุ้ม 1">ซุ้ม 1</option><option value="ซุ้ม 2">ซุ้ม 2</option>`;
@@ -477,7 +471,7 @@
                 }
             });
             selectEl.innerHTML = optionsHtml;
-            selectEl.value = currentVal; // คงค่าเดิมที่เลือกไว้
+            selectEl.value = currentVal; 
         };
 
         window.cancelOrderAdmin = (t, key) => { if(confirm('ลบ?')) remove(ref(db, `orders/${t}/${key}`)); };
