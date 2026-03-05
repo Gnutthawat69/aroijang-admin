@@ -67,6 +67,10 @@
         .kitchen-ticket { border: 2px solid var(--white); box-shadow: 0 8px 25px rgba(0,0,0,0.04); background: var(--white); border-radius: 1.5rem; margin-bottom: 20px; overflow: hidden; }
         .kitchen-ticket-header { background: linear-gradient(135deg, var(--secondary) 0%, var(--primary) 100%); padding: 15px 20px; color: var(--text-dark); display: flex; align-items: center; justify-content: space-between; }
         .kitchen-ticket-body { padding: 10px 20px; background: #FFF9FA; }
+        
+        .status-badge { padding: 4px 10px; border-radius: 12px; font-size: 0.75rem; font-weight: bold; }
+        .status-pending { background-color: #E2E8F0; color: #475569; }
+        .status-preparing { background-color: #BAE6FD; color: #0369A1; }
     </style>
 </head>
 <body>
@@ -156,8 +160,29 @@
     </div>
 
     <div class="offcanvas offcanvas-bottom" tabindex="-1" id="cartOffcanvas">
-        <div class="offcanvas-header border-bottom border-light"><h5 class="offcanvas-title fw-bold">ตะกร้าของคุณ</h5><button type="button" class="btn-close bg-light rounded-circle p-2" data-bs-dismiss="offcanvas"></button></div>
-        <div class="offcanvas-body d-flex flex-column"><div id="cust-cart-items" class="flex-grow-1 overflow-y-auto mb-3 pe-2"></div><div class="mt-auto pt-3"><div class="d-flex justify-content-between align-items-end mb-3 px-2"><span class="fw-bold text-muted">ยอดรวม</span><span id="cust-total" class="fs-2 fw-bold text-primary">฿0</span></div><button onclick="window.submitOrderFinal()" class="btn btn-primary w-100 py-3 rounded-pill fw-bold fs-5 shadow-sm">ส่งออเดอร์เข้าครัว!</button></div></div>
+        <div class="offcanvas-header border-bottom border-light">
+            <h5 class="offcanvas-title fw-bold">ตะกร้าของคุณ</h5>
+            <button type="button" class="btn-close bg-light rounded-circle p-2" data-bs-dismiss="offcanvas"></button>
+        </div>
+        <div class="offcanvas-body d-flex flex-column p-0">
+            <div id="customer-active-orders-container" class="bg-light p-3 d-none border-bottom">
+                <h6 class="fw-bold text-dark mb-2">ออเดอร์ที่กำลังทำ 🍳</h6>
+                <div id="customer-active-orders-list" class="d-flex flex-column gap-2"></div>
+            </div>
+
+            <div class="p-3 flex-grow-1 overflow-y-auto">
+                <h6 class="fw-bold text-dark mb-2 d-none" id="cart-draft-title">รายการที่ยังไม่ส่ง</h6>
+                <div id="cust-cart-items" class="mb-3"></div>
+            </div>
+
+            <div class="mt-auto p-3 bg-white border-top">
+                <div class="d-flex justify-content-between align-items-end mb-3">
+                    <span class="fw-bold text-muted">ยอดรวมตะกร้า</span>
+                    <span id="cust-total" class="fs-2 fw-bold text-primary">฿0</span>
+                </div>
+                <button id="btn-submit-order" onclick="window.submitOrderFinal()" class="btn btn-primary w-100 py-3 rounded-pill fw-bold fs-5 shadow-sm disabled">ส่งออเดอร์เข้าครัว!</button>
+            </div>
+        </div>
     </div>
 
     <div id="custom-topping-modal" class="super-modal-overlay">
@@ -223,12 +248,14 @@
         let menuData = [], ingredientsData = {}, toppingsData = [], sharedCart = {}, myOrders = {}, allOrders = {};
         let isStoreOpen = true, currentUserRole = 'customer', isFirstLoad = true, soundEnabled = false;
 
+        // ==========================================
         // UI Window Functions
+        // ==========================================
         window.openSuperModal = (id) => document.getElementById(id).classList.add('active');
         window.closeSuperModal = (id) => document.getElementById(id).classList.remove('active');
         window.showToast = (msg) => { document.getElementById('toast-msg').textContent = msg; new bootstrap.Toast(document.getElementById('liveToast')).show(); };
 
-        // 🌟 ฟังก์ชันอัปเดตสถานะในครัว (ปุ่มรับทำ / เสิร์ฟ) 🌟
+        // 🌟 อัปเดตสถานะครัว (รับออเดอร์ / จัดเตรียม / พร้อมเสิร์ฟ) 🌟
         window.updateOrderStatus = (tableKey, itemId, newStatus) => {
             update(ref(db, `orders/${tableKey}/${itemId}`), { status: newStatus });
             if (newStatus === 'done' && soundEnabled && 'speechSynthesis' in window) {
@@ -250,8 +277,9 @@
                 'i7': { id: 'i7', name: 'หมึก', stock: 30, price: 20 },
                 'i8': { id: 'i8', name: 'รวมมิตรทะเล', stock: 20, price: 25 },
                 'i9': { id: 'i9', name: 'ปลาดุกชิ้น', stock: 20, price: 10 },
-                'i10': { id: 'i10', name: 'เส้นใหญ่', stock: 50, price: 0 },
-                'i11': { id: 'i11', name: 'หมี่เหลือง', stock: 50, price: 0 }
+                'i10': { id: 'i10', name: 'เส้นก๋วยเตี๋ยว', stock: 50, price: 0 },
+                'i11': { id: 'i11', name: 'หมี่เหลือง', stock: 50, price: 0 },
+                'i12': { id: 'i12', name: 'หมี่กรอบ', stock: 50, price: 5 }
             };
 
             const initialMenus = {
@@ -311,7 +339,6 @@
         onValue(ref(db, 'menus'), snap => { 
             menuData = Object.values(snap.val() || {}); 
             window.renderMenus(); 
-            // ฟังก์ชันสำหรับแอดมินปิดเปิดเมนูเอง
             if(document.getElementById('menu-list-container')) {
                 document.getElementById('menu-list-container').innerHTML = menuData.map(m => `
                     <div class="py-2 border-bottom d-flex justify-content-between align-items-center">
@@ -354,7 +381,7 @@
         };
 
         // ==========================================
-        // Modal & Cart Logic
+        // Modal & Cart & My Orders
         // ==========================================
         window.updateOrderFields = () => { 
             const isPreorder = document.getElementById('ot-pre').checked;
@@ -433,15 +460,26 @@
 
             const orderType = document.querySelector('input[name="order_type_sel"]:checked').value;
             let pTime = ''; let pName = '';
+            
+            // สร้างเวลาสั่ง (Order Time)
+            const now = new Date();
+            const orderTimeStr = now.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
+            
+            // สร้างเวลาคาดการณ์ (Estimated Time)
+            let estTimeStr = '';
             if(orderType === 'preorder') {
                 pTime = document.getElementById('pickup-time-val').value;
                 pName = document.getElementById('pickup-name-val').value.trim();
                 if(!pTime || !pName) return window.showToast("❌ กรุณาระบุชื่อและเวลารับของพรีออเดอร์ครับ");
+                estTimeStr = pTime; // เวลารับคือเวลาคาดการณ์
+            } else {
+                estTimeStr = new Date(now.getTime() + 15 * 60000).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }); // บวกล่วงหน้า 15 นาที
             }
 
             const item = { 
                 id: 'c_'+Date.now(), menu_id: m.id, name: fullName, price: finalP, quantity: 1, 
-                ingredient_id: meatId, order_type: orderType, pickup_time: pTime, customer_name: pName 
+                ingredient_id: meatId, order_type: orderType, pickup_time: pTime, customer_name: pName,
+                order_time: orderTimeStr, est_time: estTimeStr
             };
             
             if(document.getElementById('admin-ui').classList.contains('d-flex')) {
@@ -460,22 +498,65 @@
         };
 
         window.renderCart = () => {
+            // ส่วนที่ 1: ของในตะกร้าที่ยังไม่ส่ง
             const cartL = Object.values(sharedCart); let tot = 0;
             document.getElementById('cust-cart-items').innerHTML = cartL.map(i => {
                 tot += i.price * i.quantity;
                 return `<div class="bg-white rounded-4 p-3 mb-2 border shadow-sm d-flex justify-content-between align-items-center">
                     <div><b>${i.name}</b><br><span class="text-primary fw-bold">฿${i.price*i.quantity}</span></div>
                     <div class="fw-bold px-3 py-1 bg-light rounded-pill">x${i.quantity}</div></div>`;
-            }).join('') || '<div class="text-center py-5">ว่างเปล่า</div>';
+            }).join('') || '<div class="text-center py-4 text-muted">ยังไม่ได้เลือกเมนู</div>';
+            
+            // อัปเดตปุ่มล่างสุด
             document.getElementById('cust-total').textContent = `฿${tot}`;
-            if(cartL.length) { document.getElementById('fab-cart-container').classList.remove('d-none'); document.getElementById('cart-count-fab').textContent = cartL.length; }
-            else { document.getElementById('fab-cart-container').classList.add('d-none'); }
+            const btnSubmit = document.getElementById('btn-submit-order');
+            if(cartL.length) { 
+                btnSubmit.classList.remove('disabled');
+                document.getElementById('cart-draft-title').classList.remove('d-none');
+            } else { 
+                btnSubmit.classList.add('disabled'); 
+                document.getElementById('cart-draft-title').classList.add('d-none');
+            }
+
+            // ส่วนที่ 2: ออเดอร์ที่สั่งไปแล้ว (ติดตามสถานะและเวลาคาดการณ์)
+            const activeOrders = Object.values(myOrders).filter(o => o.status !== 'done');
+            const activeContainer = document.getElementById('customer-active-orders-container');
+            const activeList = document.getElementById('customer-active-orders-list');
+
+            if(activeOrders.length > 0) {
+                activeContainer.classList.remove('d-none');
+                activeList.innerHTML = activeOrders.map(o => {
+                    let statusText = o.status === 'pending' ? '⚪ รอรับออเดอร์' : '🟡 กำลังทำ';
+                    let statusColor = o.status === 'pending' ? 'text-secondary' : 'text-primary';
+                    return `
+                    <div class="bg-white rounded-4 p-3 border shadow-sm small">
+                        <div class="d-flex justify-content-between mb-1">
+                            <b class="text-dark">${o.name} <span class="text-muted ms-1">x${o.quantity}</span></b>
+                            <span class="fw-bold ${statusColor}">${statusText}</span>
+                        </div>
+                        <div class="text-muted" style="font-size: 0.75rem;">เวลาสั่ง: ${o.order_time} | คาดว่าได้รับ: <b class="text-dark">${o.est_time}</b></div>
+                    </div>`;
+                }).join('');
+            } else {
+                activeContainer.classList.add('d-none');
+            }
+
+            // อัปเดตตัวเลขแจ้งเตือนบนปุ่มตะกร้าลอย
+            const totalCount = cartL.length + activeOrders.length;
+            if(totalCount > 0) {
+                document.getElementById('fab-cart-container').classList.remove('d-none'); 
+                document.getElementById('cart-count-fab').textContent = cartL.length || activeOrders.length; // เน้นโชว์ตะกร้าก่อน
+            } else {
+                document.getElementById('fab-cart-container').classList.add('d-none');
+            }
         };
 
         window.toggleCart = () => bootstrap.Offcanvas.getOrCreateInstance(document.getElementById('cartOffcanvas')).toggle();
 
         window.submitOrderFinal = async () => {
             const list = Object.values(sharedCart); 
+            if(list.length === 0) return;
+
             try {
                 for(let i of list) { 
                     const target = i.order_type === 'preorder' ? `Pre-order_${i.customer_name}` : tableNo;
@@ -483,8 +564,7 @@
                     if(i.ingredient_id) await window.updateStock(i.ingredient_id, -i.quantity); 
                 }
                 sharedCart = {}; window.renderCart(); 
-                bootstrap.Offcanvas.getInstance(document.getElementById('cartOffcanvas')).hide(); 
-                window.showToast("✅ ส่งออเดอร์เข้าครัวแล้วครับ ชำระเงินที่เคาน์เตอร์นะครับ");
+                window.showToast("✅ ส่งออเดอร์เข้าครัวแล้วครับ (ติดตามสถานะได้ในตะกร้า)");
             } catch(e) { window.showToast("❌ การสั่งล้มเหลว"); }
         };
 
@@ -523,6 +603,7 @@
             });
         }
 
+        // 🔥 การแสดงผลครัวแบบมัดรวมเป็น "บิล/โต๊ะ" และสถานะ 3 สเต็ป 🔥
         window.renderKitchen = () => {
             let tickets = [];
             Object.entries(allOrders).forEach(([tK, ordersObj]) => {
@@ -548,19 +629,22 @@
 
             document.getElementById('kitchen-all-list').innerHTML = tickets.map((ticket, index) => {
                 let itemsHtml = ticket.items.map(item => {
-                    // ปุ่มอัปเดตสถานะใช้งานได้แล้ว
+                    
+                    // ปุ่ม 3 สเต็ปชัดเจน (รับออเดอร์ -> กำลังทำ -> พร้อมเสิร์ฟ)
                     const btn = item.status === 'pending' 
-                        ? `<button onclick="window.updateOrderStatus('${ticket.tK}', '${item.id}', 'preparing')" class="btn btn-outline-primary rounded-pill btn-sm px-3 fw-bold">รับทำ</button>` 
-                        : `<button onclick="window.updateOrderStatus('${ticket.tK}', '${item.id}', 'done')" class="btn btn-primary rounded-pill btn-sm px-3 fw-bold shadow-sm">เสิร์ฟ</button>`;
-                    const statusBadge = item.status === 'preparing' ? `<span class="badge bg-primary ms-2">กำลังทำ 🍳</span>` : '';
+                        ? `<button onclick="window.updateOrderStatus('${ticket.tK}', '${item.id}', 'preparing')" class="btn btn-outline-primary rounded-pill btn-sm px-3 fw-bold">📥 รับออเดอร์</button>` 
+                        : `<button onclick="window.updateOrderStatus('${ticket.tK}', '${item.id}', 'done')" class="btn btn-primary rounded-pill btn-sm px-3 fw-bold shadow-sm">✅ พร้อมเสิร์ฟ</button>`;
+                    
+                    const statusBadge = item.status === 'preparing' ? `<span class="status-badge status-preparing ms-2">กำลังทำ 🍳</span>` : `<span class="status-badge status-pending ms-2">รอยืนยัน</span>`;
                     
                     return `
                     <div class="d-flex justify-content-between align-items-center py-2 border-bottom border-light">
                         <div class="pe-2">
                             <span class="fw-bold text-primary me-1 fs-6">x${item.quantity}</span>
-                            <span class="fw-bold text-dark" style="font-size:0.95rem;">${item.name}</span>${statusBadge}
+                            <span class="fw-bold text-dark" style="font-size:0.95rem;">${item.name}</span>
+                            <div class="mt-1">${statusBadge} <span class="text-muted" style="font-size:0.7rem;">สั่ง: ${item.order_time}</span></div>
                         </div>
-                        <div class="text-end" style="min-width: 75px;">${btn}</div>
+                        <div class="text-end" style="min-width: 90px;">${btn}</div>
                     </div>`;
                 }).join('');
 
@@ -638,12 +722,18 @@
                         document.getElementById('auth-overlay').remove(); 
                         document.getElementById('customer-ui').classList.replace('d-none', 'd-flex'); 
                         document.getElementById('cust-table-no').textContent = tableNo;
+                        
+                        // Fetch My Orders สำหรับลูกค้า
+                        onValue(ref(db, `orders/${tableNo}`), snap => { 
+                            myOrders = snap.val() || {}; 
+                            window.renderCart(); 
+                        });
                     } else { throw new Error("QR โต๊ะหมดอายุครับ แอดมินต้องสร้างให้ใหม่"); }
                 } else {
                     await liff.init({ liffId: LIFF_ID });
                     if (liff.isLoggedIn()) {
                         const uid = (await liff.getProfile()).userId;
-                        startAdminMode('admin'); // ล็อกอินเป็นแอดมินเพื่อทดสอบ
+                        startAdminMode('admin'); 
                     } else { 
                         document.getElementById('auth-loading').classList.add('d-none'); 
                         document.getElementById('login-container').classList.remove('d-none'); 
