@@ -141,7 +141,8 @@
                 <span class="fab-cart-count fw-bold" id="cart-count-fab">0</span>
             </button>
         </div>
-        <span id="cart-count" class="d-none"></span> </div>
+        <span id="cart-count" class="d-none"></span>
+    </div>
 
     <div id="admin-ui" class="d-none flex-column min-vh-100" style="background: #F8F0FA;">
         <nav class="bg-white p-3 sticky-top shadow-sm d-flex justify-content-between align-items-center" style="z-index: 1030; border-bottom-left-radius: 20px; border-bottom-right-radius: 20px;">
@@ -299,7 +300,7 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
         import { getDatabase, ref, onValue, update, remove, set, push, serverTimestamp, get } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-database.js";
 
-        // Firebase Config เดิมของคุณ
+        // Firebase Config
         const firebaseConfig = { 
             apiKey: "AIzaSyAppTwYAQcvviSk_H8hwsRRHSB9Y0b5O6k", 
             authDomain: "canva-ai-database-ledger-86b6c.firebaseapp.com", 
@@ -326,6 +327,21 @@
             new bootstrap.Toast(document.getElementById('liveToast')).show(); 
         };
 
+        // ฟังก์ชันที่ถูกเรียกผ่าน HTML (การทำงานฐานข้อมูล)
+        window.approveUser = (uid) => {
+            update(ref(db, `users/${uid}`), { role: 'staff' });
+            window.showToast("✅ อนุมัติสิทธิ์พนักงานเรียบร้อย");
+        };
+
+        window.toggleMenuStatus = (id, currentStatus) => {
+            const newStatus = currentStatus === 'soldout' ? 'available' : 'soldout';
+            update(ref(db, `menus/${id}`), { status: newStatus });
+        };
+
+        window.delTopping = (id) => {
+            remove(ref(db, `toppings/${id}`));
+        };
+
         // 🎵 Audio & Voice Synthesis
         window.toggleSoundAlert = () => {
             const audio = document.getElementById('dingdong-sound'); 
@@ -338,12 +354,14 @@
                 btn.classList.replace('btn-light', 'btn-primary');
             }).catch(() => alert("โปรดแตะหน้าจอ 1 ครั้งก่อนเปิดเสียง"));
         };
+
         window.playKitchenVoice = (text) => { 
             if (!soundEnabled || !('speechSynthesis' in window)) return; 
             window.speechSynthesis.cancel(); 
             const ut = new SpeechSynthesisUtterance(text); 
             ut.lang = 'th-TH'; ut.rate = 1.1; window.speechSynthesis.speak(ut); 
         };
+
         const playIncomingSound = (text) => {
             if (!soundEnabled) return; 
             const audio = document.getElementById('dingdong-sound'); 
@@ -392,12 +410,10 @@
             } catch (err) { showError("เกิดข้อผิดพลาด", err.message); showLoginScreen(); }
         }
 
-        // Auth UI states
         function showLoginScreen() { document.getElementById('auth-loading').classList.add('d-none'); document.getElementById('login-container').classList.remove('d-none'); document.getElementById('login-container').classList.add('d-flex'); }
         function showPendingScreen() { document.getElementById('auth-loading').classList.add('d-none'); document.getElementById('auth-msg').classList.add('d-none'); document.getElementById('pending-container').classList.remove('d-none'); document.getElementById('pending-container').classList.add('d-flex'); }
         function showError(title, msg) { document.getElementById('auth-loading').classList.add('d-none'); document.getElementById('auth-status').innerHTML = `<span class="text-danger fw-bold">${title}</span>`; document.getElementById('auth-msg').innerHTML = msg; }
 
-        // Fetch Toppings
         onValue(ref(db, 'toppings'), snap => { 
             toppingData = Object.values(snap.val() || {}); 
             if(document.getElementById('topping-list-container')) {
@@ -429,7 +445,6 @@
             });
         }
 
-        // การจัดการออเดอร์ (Topping & Cart)
         window.openToppingModal = (id, role) => {
             const m = menuData.find(x => x.id === id); 
             if(m.status === 'soldout' || (role === 'customer' && !isStoreOpen)) return;
@@ -480,11 +495,11 @@
             
             if (role === 'customer') { 
                 update(ref(db, `carts/${tableNo}/${id}_${Date.now()}`), item); 
-                showToast("🛒 ใส่ตะกร้าแล้ว"); 
+                window.showToast("🛒 ใส่ตะกร้าแล้ว"); 
             } else { 
                 const target = orderType === 'preorder' ? `Pre-order_${pName}` : posActiveTable; 
                 push(ref(db, `orders/${target}`), { ...item, status: 'pending', created_at: serverTimestamp() }); 
-                showToast("✅ จดยืนยันแล้ว"); 
+                window.showToast("✅ จดยืนยันแล้ว"); 
             } 
             window.closeSuperModal('custom-topping-modal');
         };
@@ -536,8 +551,8 @@
                 await remove(ref(db, `carts/${tableNo}`)); 
                 window.closeSuperModal('custom-confirm-modal'); 
                 bootstrap.Offcanvas.getInstance(document.getElementById('cartOffcanvas')).hide(); 
-                showToast("✅ ส่งออเดอร์เข้าครัวแล้วครับ!");
-            } catch(e) { showToast("❌ การสั่งล้มเหลว"); }
+                window.showToast("✅ ส่งออเดอร์เข้าครัวแล้วครับ!");
+            } catch(e) { window.showToast("❌ การสั่งล้มเหลว"); }
         };
 
         // 👨‍🍳 โหมดแอดมิน/ห้องครัว
@@ -561,7 +576,7 @@
                                 knownOrders.add(id); 
                                 const text = item.order_type === 'preorder' ? `พรีออเดอร์เข้าใหม่จ้า จากคุณ ${item.customer_name} ${item.menu_name} ${item.quantity} ที่` : `ออเดอร์เข้าใหม่จ้า โต๊ะ ${tK} ${item.menu_name} ${item.quantity} ที่`;
                                 playIncomingSound(text); 
-                                showToast(`🔥 ใหม่: ${tK}`);
+                                window.showToast(`🔥 ใหม่: ${tK}`);
                             }
                         }); 
                     });
@@ -581,7 +596,7 @@
                     document.getElementById('menu-list-container').innerHTML = menuData.map(m => `
                         <div class="py-3 border-bottom d-flex justify-content-between align-items-center">
                             <div><b>${m.name}</b> <br><span class="text-primary small fw-bold">฿${m.price}</span></div>
-                            <button onclick="update(ref(db, 'menus/${m.id}'), {status:'${m.status==='soldout'?'available':'soldout'}'})" class="btn btn-sm ${m.status==='soldout'?'btn-primary':'btn-light border'} rounded-pill px-3">${m.status==='soldout'?'เปิดขาย':'ตั้งหมด'}</button>
+                            <button onclick="window.toggleMenuStatus('${m.id}', '${m.status}')" class="btn btn-sm ${m.status==='soldout'?'btn-primary':'btn-light border'} rounded-pill px-3">${m.status==='soldout'?'เปิดขาย':'ตั้งหมด'}</button>
                         </div>`).join(''); 
                 }
             });
@@ -591,7 +606,7 @@
                 document.getElementById('users-list-container').innerHTML = Object.entries(us).map(([uid, u]) => `
                     <div class="py-3 border-bottom d-flex justify-content-between align-items-center">
                         <div><b>${u.name}</b> <span class="badge bg-light text-muted ms-1">${u.role}</span></div>
-                        ${u.role==='pending' ? `<button onclick="update(ref(db,'users/${uid}'),{role:'staff'})" class="btn btn-sm btn-primary rounded-pill px-3">อนุมัติ</button>` : ''}
+                        ${u.role==='pending' ? `<button onclick="window.approveUser('${uid}')" class="btn btn-sm btn-primary rounded-pill px-3">อนุมัติ</button>` : ''}
                     </div>`).join(''); 
             });
         }
@@ -649,11 +664,10 @@
                 await remove(ref(db, `table_sessions/${t}`)); 
                 window.renderCashier();
                 window.playKitchenVoice('ขอบคุณที่ใช้บริการร้านหนูแดง อาหารตามสั่ง โอกาสหน้าเชิญใหม่นะครับ');
-                showToast("✅ เคลียร์บิลเรียบร้อย");
+                window.showToast("✅ เคลียร์บิลเรียบร้อย");
             }
         };
 
-        // ตั้งค่า
         window.saveMenu = () => { 
             const id = document.getElementById('m-edit-id').value || 'm'+Date.now(); 
             set(ref(db,`menus/${id}`), { 
@@ -664,13 +678,12 @@
                 status: 'available' 
             }); 
             document.getElementById('m-name').value=''; document.getElementById('m-price').value=''; document.getElementById('m-emoji').value='';
-            showToast("✅ บันทึกเมนูแล้ว");
+            window.showToast("✅ บันทึกเมนูแล้ว");
         };
 
         window.toggleStoreStatus = (s) => update(ref(db,'settings'), { store_open: s });
         window.toggleCart = () => { bootstrap.Offcanvas.getOrCreateInstance(document.getElementById('cartOffcanvas')).toggle(); };
 
-        // เริ่มระบบ
         initSystem();
     </script>
 </body>
