@@ -3,302 +3,61 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>หนูแดง อาหารตามสั่ง | Master Version</title>
+    <title>กู้ระบบหนูแดง</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@400;700&display=swap" rel="stylesheet">
     <style>
-        :root { 
-            --primary: #fb7185; --primary-soft: #ffe4e6; --bg: #fffafb; 
-            --text-dark: #334155; --text-muted: #64748b;
-        }
-        body { font-family: 'Prompt', sans-serif; background-color: var(--bg); color: var(--text-dark); overflow-x: hidden; }
-
-        /* 🌸 UI มินิมอล โค้งมน */
-        .glass-nav { background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(10px); border-bottom: 1px solid var(--primary-soft); position: sticky; top: 0; z-index: 1000; }
-        .card-minimal { background: white; border: none; border-radius: 1.5rem; box-shadow: 0 10px 30px -5px rgba(251, 113, 133, 0.1); }
-        .btn-round { border-radius: 2rem; padding: 10px 25px; font-weight: 600; transition: 0.2s; }
-        
-        /* 👨‍🍳 สถานะคิวครัว */
-        .ticket-box { background: white; border-radius: 1.5rem; border-left: 8px solid var(--primary); margin-bottom: 1.5rem; overflow: hidden; }
-        .ticket-header { background: var(--primary-soft); padding: 12px 20px; font-weight: 700; display: flex; justify-content: space-between; align-items: center; }
-        .status-pill { padding: 4px 12px; border-radius: 1rem; font-size: 0.75rem; font-weight: 800; text-transform: uppercase; }
-        .status-pending { background: #f1f5f9; color: #64748b; }
-        .status-preparing { background: #e0f2fe; color: #0369a1; animation: pulse 2s infinite; }
-        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.6; } 100% { opacity: 1; } }
-
-        /* Super Modal */
-        .super-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); backdrop-filter: blur(8px); z-index: 2000; display: none; align-items: center; justify-content: center; padding: 20px; }
-        .super-modal.active { display: flex; }
-        .modal-box { background: white; width: 100%; max-width: 400px; border-radius: 2rem; padding: 25px; transform: scale(0.9); transition: 0.3s; }
-        .super-modal.active .modal-box { transform: scale(1); }
-
-        ::-webkit-scrollbar { width: 0px; }
+        body { font-family: 'Prompt', sans-serif; background: #fff0f5; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; }
+        .rescue-box { background: white; padding: 30px; border-radius: 2rem; box-shadow: 0 10px 30px rgba(0,0,0,0.1); text-align: center; width: 90%; max-width: 400px; border: 3px solid #fb7185; }
+        .u-id-display { background: #f8fafc; border: 2px dashed #cbd5e1; padding: 15px; border-radius: 1rem; margin-top: 20px; word-break: break-all; display: none; }
     </style>
 </head>
 <body>
 
-    <audio id="dingdong" src="https://actions.google.com/sounds/v1/alarms/beep_short.ogg"></audio>
+    <div class="rescue-box">
+        <h2 class="fw-bold text-danger">🛠️ ปุ่มกู้ระบบ Admin</h2>
+        <p class="text-muted mb-4">กดปุ่มด้านล่างเพื่อดูรหัส User ID ของคุณ<br>โดยไม่ต้องรอการอนุมัติ</p>
+        
+        <div class="d-grid gap-3">
+            <button onclick="liff.login()" class="btn btn-primary rounded-pill py-3 fw-bold">1. กดเข้าสู่ระบบ LINE</button>
+            
+            <button onclick="getMyID()" class="btn btn-danger rounded-pill py-3 fw-bold">2. กดดูรหัส User ID ของฉัน</button>
+        </div>
 
-    <div id="auth-overlay" style="position:fixed; top:0; left:0; width:100%; height:100%; background:white; z-index:9999; display:flex; flex-direction:column; align-items:center; justify-content:center;">
-        <div class="spinner-border text-primary mb-3"></div>
-        <h5 class="fw-bold">หนูแดง กำลังโหลด...</h5>
-    </div>
-
-    <div id="customer-ui" class="d-none">
-        <nav class="glass-nav p-3 d-flex justify-content-between align-items-center">
-            <div class="fw-bold fs-4">หนูแดง <span class="badge bg-primary rounded-pill" id="table-label">--</span></div>
-            <button class="btn btn-outline-primary btn-round" onclick="window.toggleCart()">🛒 <span id="cart-count">0</span></button>
-        </nav>
-        <div class="container py-3">
-            <div class="alert alert-light border card-minimal text-center mb-4">
-                <div class="text-muted small">ลำดับคิวของคุณ</div>
-                <div class="fs-1 fw-bold text-primary" id="my-queue-no">--</div>
-                <div class="small" id="my-est-time">คาดการณ์เวลาได้รับ: --:--</div>
-            </div>
-            <div class="row g-3" id="menu-grid"></div>
+        <div id="display-area" class="u-id-display">
+            <div class="small fw-bold text-secondary mb-1">รหัสของคุณคือ:</div>
+            <div id="user-id-text" class="fw-bold text-dark fs-5"></div>
+            <div class="mt-2 small text-danger">* นำรหัสนี้ไปใส่ใน Firebase โหนด users เพื่อเป็น admin ครับ</div>
         </div>
     </div>
 
-    <div id="admin-ui" class="d-none">
-        <nav class="glass-nav p-3 d-flex justify-content-between align-items-center">
-            <div class="fw-bold fs-5">👨‍🍳 ครัวหนูแดง</div>
-            <div class="d-flex gap-2">
-                <button id="btn-audio" onclick="window.enableAudio()" class="btn btn-danger btn-sm btn-round">🔇 เปิดเสียง</button>
-                <button onclick="liff.logout(); location.reload();" class="btn btn-dark btn-sm btn-round">ออก</button>
-            </div>
-        </nav>
-        <div class="container py-3">
-            <ul class="nav nav-pills nav-fill mb-4 bg-white p-1 rounded-pill shadow-sm" id="adminTabs">
-                <li class="nav-item"><button class="nav-link active rounded-pill" data-bs-toggle="pill" data-bs-target="#tab-kitchen">🔥 คิวครัว</button></li>
-                <li class="nav-item"><button class="nav-link rounded-pill" data-bs-toggle="pill" data-bs-target="#tab-pos">💰 POS</button></li>
-            </ul>
-            <div class="tab-content">
-                <div class="tab-pane fade show active" id="tab-kitchen">
-                    <div id="kitchen-list"></div>
-                </div>
-                <div class="tab-pane fade" id="tab-pos">
-                    <div class="card card-minimal p-3 mb-3 text-center">
-                        <select id="pos-table-sel" onchange="window.renderPOS()" class="form-select border-0 fs-4 fw-bold text-center"></select>
-                        <button class="btn btn-primary btn-round w-100 mt-3" onclick="window.openPOSModal()">➕ เพิ่มรายการอาหาร</button>
-                    </div>
-                    <div id="pos-bill-list" class="mb-4"></div>
-                    <div class="card card-minimal p-3">
-                        <div class="d-flex justify-content-between fs-3 fw-bold mb-3"><span>รวม</span><span id="pos-total">฿0</span></div>
-                        <button id="btn-pay" onclick="window.clearBill()" class="btn btn-success btn-round w-100 py-3 fs-5" disabled>เช็คบิล / รับเงิน</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
+    <script>
+        async function initLIFF() {
+            await liff.init({ liffId: "2009300498-iyTZochS" });
+            if (liff.isLoggedIn()) {
+                console.log("Logged In");
+            }
+        }
 
-    <div id="modal-topping" class="super-modal">
-        <div class="modal-box">
-            <h4 class="fw-bold" id="m-name">ชื่อเมนู</h4>
-            <h5 class="text-primary fw-bold mb-4" id="m-price">฿0</h5>
-            <div class="d-flex gap-2 mb-3">
-                <input type="radio" class="btn-check" name="ord_type" id="t-dine" value="dine_in" checked>
-                <label class="btn btn-outline-secondary w-100 btn-round" for="t-dine">🍽️ ทานร้าน</label>
-                <input type="radio" class="btn-check" name="ord_type" id="t-take" value="takeaway">
-                <label class="btn btn-outline-secondary w-100 btn-round" for="t-take">🥡 กลับบ้าน</label>
-            </div>
-            <div id="topping-list" class="mb-3"></div>
-            <input type="text" id="m-note" class="form-control rounded-4 p-3 mb-4" placeholder="หมายเหตุ (เช่น เผ็ดน้อย)">
-            <div class="d-flex gap-2">
-                <button class="btn btn-light flex-fill btn-round" onclick="window.closeModal()">ยกเลิก</button>
-                <button class="btn btn-primary flex-fill btn-round" onclick="window.addToCart()">ใส่ตะกร้า</button>
-            </div>
-        </div>
-    </div>
-
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
-        import { getDatabase, ref, onValue, update, remove, set, push, serverTimestamp, get } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-database.js";
-
-        const firebaseConfig = { apiKey: "AIzaSyAppTwYAQcvviSk_H8hwsRRHSB9Y0b5O6k", authDomain: "canva-ai-database-ledger-86b6c.firebaseapp.com", databaseURL: "https://canva-ai-database-ledger-86b6c-default-rtdb.asia-southeast1.firebasedatabase.app", projectId: "canva-ai-database-ledger-86b6c" };
-        const LIFF_ID = "2009300498-iyTZochS";
-        const app = initializeApp(firebaseConfig); const db = getDatabase(app);
-        const urlParams = new URLSearchParams(window.location.search);
-        const tableNo = urlParams.get('table'); const token = urlParams.get('token');
-
-        let menuData = [], toppingData = [], allOrders = {}, cart = {};
-        let audioInit = false, knownOrders = new Set();
-
-        // 🔊 ระบบเสียง
-        window.enableAudio = () => {
-            const audio = document.getElementById('dingdong');
-            audio.play().then(() => { audio.pause(); audio.currentTime = 0; audioInit = true; 
-                document.getElementById('btn-audio').classList.replace('btn-danger', 'btn-success');
-                document.getElementById('btn-audio').innerText = '🔊 เสียงเปิดอยู่';
-            });
-        };
-        const speak = (text) => { if(!audioInit || !('speechSynthesis' in window)) return; window.speechSynthesis.cancel(); const ut = new SpeechSynthesisUtterance(text); ut.lang = 'th-TH'; window.speechSynthesis.speak(ut); };
-
-        // 🚀 เริ่มต้นระบบ
-        async function init() {
+        async function getMyID() {
             try {
-                if (tableNo && token) {
-                    const session = await get(ref(db, `table_sessions/${tableNo}`));
-                    if (session.val() === token) startCustomer(); else alert("QR หมดอายุ");
-                } else {
-                    await liff.init({ liffId: LIFF_ID });
-                    if (liff.isLoggedIn()) {
-                        const profile = await liff.getProfile();
-                        const user = await get(ref(db, `users/${profile.userId}`));
-                        if (user.exists() && (user.val().role === 'admin' || user.val().role === 'staff')) startAdmin(user.val().role, profile.displayName);
-                        else alert("รอการอนุมัติสิทธิ์");
-                    } else liff.login();
+                if (!liff.isLoggedIn()) {
+                    alert("กรุณากดปุ่ม 'เข้าสู่ระบบ LINE' ก่อนครับ");
+                    return;
                 }
-            } catch (e) { console.error(e); }
-        }
-
-        function startCustomer() {
-            document.getElementById('auth-overlay').remove();
-            document.getElementById('customer-ui').classList.remove('d-none');
-            document.getElementById('table-label').innerText = tableNo;
-            
-            onValue(ref(db, 'menus'), snap => {
-                menuData = Object.values(snap.val() || {});
-                document.getElementById('menu-grid').innerHTML = menuData.map(m => `
-                    <div class="col-6"><div class="card card-minimal p-3 text-center" onclick="window.openModal('${m.id}')">
-                        <div class="fs-1">${m.emoji}</div><div class="fw-bold">${m.name}</div><div class="text-primary">฿${m.price}</div>
-                    </div></div>`).join('');
-            });
-            onValue(ref(db, 'toppings'), snap => toppingData = Object.values(snap.val() || {}));
-        }
-
-        window.openModal = (id) => {
-            const m = menuData.find(x => x.id === id);
-            window.currentMenuId = id;
-            document.getElementById('m-name').innerText = m.name;
-            document.getElementById('m-price').innerText = `฿${m.price}`;
-            document.getElementById('topping-list').innerHTML = toppingData.map(t => `
-                <div class="d-flex justify-content-between p-2 border-bottom">
-                    <div class="form-check"><input class="form-check-input" type="checkbox" value="${t.name}" data-price="${t.price}" id="t-${t.id}"><label class="form-check-label" for="t-${t.id}">${t.name}</label></div>
-                    <span class="text-muted">+฿${t.price}</span>
-                </div>`).join('');
-            document.getElementById('modal-topping').classList.add('active');
-        };
-
-        window.closeModal = () => document.getElementById('modal-topping').classList.remove('active');
-
-        window.addToCart = () => {
-            const m = menuData.find(x => x.id === window.currentMenuId);
-            let addedPrice = 0, tops = [];
-            document.querySelectorAll('#topping-list input:checked').forEach(c => { addedPrice += Number(c.dataset.price); tops.push(c.value); });
-            
-            const now = new Date();
-            const orderTime = now.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
-            const estTime = new Date(now.getTime() + 15*60000).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
-
-            const item = {
-                name: m.name,
-                fullName: `${m.name} ${tops.length ? `(+${tops.join(',')})` : ''} ${document.getElementById('m-note').value}`,
-                price: m.price + addedPrice,
-                quantity: 1,
-                status: 'pending',
-                order_time: orderTime,
-                est_time: estTime,
-                created_at: serverTimestamp()
-            };
-
-            push(ref(db, `orders/${tableNo}`), item);
-            window.closeModal();
-            alert("ส่งออเดอร์เข้าครัวแล้ว!");
-        };
-
-        // 👨‍🍳 ระบบแอดมิน
-        function startAdmin(role, name) {
-            document.getElementById('auth-overlay').remove();
-            document.getElementById('admin-ui').classList.remove('d-none');
-            
-            onValue(ref(db, 'orders'), snap => {
-                allOrders = snap.val() || {};
-                renderKitchen();
-                renderPOS();
-                
-                // แจ้งเตือนออเดอร์ใหม่
-                Object.entries(allOrders).forEach(([tK, orders]) => {
-                    Object.entries(orders).forEach(([id, item]) => {
-                        if (!knownOrders.has(id) && item.status === 'pending') {
-                            knownOrders.add(id);
-                            if(audioInit) {
-                                document.getElementById('dingdong').play();
-                                speak(`ออเดอร์ใหม่จากโต๊ะ ${tK} ${item.name}`);
-                            }
-                        }
-                    });
-                });
-            });
-        }
-
-        window.renderKitchen = () => {
-            let q = [];
-            Object.entries(allOrders).forEach(([tK, orders]) => {
-                Object.entries(orders).forEach(([id, item]) => {
-                    if (item.status !== 'done') q.push({ tK, id, ...item });
-                });
-            });
-            q.sort((a,b) => a.created_at - b.created_at);
-
-            document.getElementById('kitchen-list').innerHTML = q.map((item, idx) => `
-                <div class="ticket-box">
-                    <div class="ticket-header">
-                        <span>#${idx+1} โต๊ะ ${item.tK}</span>
-                        <span class="status-pill ${item.status==='pending'?'status-pending':'status-preparing'}">
-                            ${item.status==='pending'?'รับออเดอร์':'กำลังจัดเตรียม'}
-                        </span>
-                    </div>
-                    <div class="p-3 d-flex justify-content-between align-items-center">
-                        <div>
-                            <div class="fw-bold fs-5">${item.fullName}</div>
-                            <div class="text-muted small">สั่งเมื่อ: ${item.order_time} | คาดการณ์: ${item.est_time}</div>
-                        </div>
-                        <div>
-                            ${item.status==='pending' ? 
-                            `<button onclick="window.updateStatus('${item.tK}','${item.id}','preparing')" class="btn btn-outline-primary btn-round">📥 รับทำ</button>` :
-                            `<button onclick="window.updateStatus('${item.tK}','${item.id}','done')" class="btn btn-success btn-round">✅ พร้อมเสิร์ฟ</button>`}
-                        </div>
-                    </div>
-                </div>`).join('');
-        };
-
-        window.updateStatus = (tK, id, status) => {
-            update(ref(db, `orders/${tK}/${id}`), { status: status });
-            if (status === 'preparing') speak("กำลังจัดเตรียมอาหารค่ะ");
-            if (status === 'done') speak(`โต๊ะ ${tK} อาหารพร้อมเสิร์ฟแล้วค่ะ`);
-        };
-
-        window.renderPOS = () => {
-            const sel = document.getElementById('pos-table-sel');
-            if(!sel.innerHTML) {
-                let opt = '';
-                for(let i=1; i<=10; i++) opt += `<option value="${i}">โต๊ะ ${i}</option>`;
-                sel.innerHTML = opt;
+                const profile = await liff.getProfile();
+                document.getElementById('user-id-text').innerText = profile.userId;
+                document.getElementById('display-area').style.display = 'block';
+                // ก๊อปปี้รหัสให้อัตโนมัติด้วย
+                navigator.clipboard.writeText(profile.userId);
+                alert("ดึงรหัสสำเร็จ! และคัดลอกรหัสไว้ให้แล้วครับ");
+            } catch (err) {
+                alert("เกิดข้อผิดพลาด: " + err.message);
             }
-            const tK = sel.value;
-            const items = Object.entries(allOrders[tK] || {});
-            let tot = 0, html = '';
-            items.forEach(([id, i]) => {
-                tot += i.price * i.quantity;
-                html += `<div class="p-2 border-bottom d-flex justify-content-between"><b>${i.fullName}</b> <b>฿${i.price}</b></div>`;
-            });
-            document.getElementById('pos-bill-list').innerHTML = html;
-            document.getElementById('pos-total').innerText = `฿${tot}`;
-            document.getElementById('btn-pay').disabled = tot === 0;
-        };
+        }
 
-        window.clearBill = async () => {
-            const tK = document.getElementById('pos-table-sel').value;
-            if(confirm("ยืนยันการรับเงินและเช็คบิล?")) {
-                await remove(ref(db, `orders/${tK}`));
-                await remove(ref(db, `table_sessions/${tK}`));
-                speak("เช็คบิลเรียบร้อย ขอบคุณที่ใช้บริการค่ะ");
-            }
-        };
-
-        init();
+        initLIFF();
     </script>
 </body>
 </html>
