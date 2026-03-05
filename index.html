@@ -131,7 +131,7 @@
                 <div class="card border-0 shadow-sm rounded-4 mb-3"><div class="card-body" id="adm-checkout-list" style="max-height: 40vh; overflow-y: auto;"></div></div>
                 <div class="card border-0 shadow-sm rounded-4"><div class="card-body">
                     <div class="d-flex justify-content-between align-items-end mb-3"><span class="fw-bold">ยอดรวม</span><span id="adm-c-total" class="fs-2 fw-bold text-primary">฿0</span></div>
-                    <div class="d-flex gap-2"><button onclick="window.openSuperModal('custom-split-modal')" class="btn btn-light w-50 rounded-pill fw-bold border">✂️ แยกบิล</button><button id="adm-btn-clear" onclick="window.clearTable()" disabled class="btn btn-primary w-50 rounded-pill fw-bold shadow-sm py-2">รับเงิน / เคลียร์บิล</button></div>
+                    <button id="adm-btn-clear" onclick="window.clearTable()" disabled class="btn btn-primary w-100 rounded-pill fw-bold shadow-sm py-2">รับเงิน / เคลียร์บิล</button>
                 </div></div>
             </div>
 
@@ -141,7 +141,7 @@
                     
                     <div class="p-3 bg-danger-subtle rounded-4 mb-4 text-center border border-danger border-opacity-25">
                         <h6 class="fw-bold text-danger mb-2">⚠️ โซนอันตราย (ล้างฐานข้อมูล)</h6>
-                        <p class="small text-dark opacity-75 mb-3">ลบเมนูและสต็อกเก่าทิ้งทั้งหมด เพื่อลงชุดข้อมูลเริ่มต้น 16 หมวด (กะเพรา, ต้มยำ ฯลฯ)</p>
+                        <p class="small text-dark opacity-75 mb-3">ลบเมนูและสต็อกเก่าทิ้งทั้งหมด เพื่อลงชุดข้อมูลเริ่มต้น 16 หมวดอัตโนมัติ</p>
                         <button onclick="window.seedDatabase()" class="btn btn-danger rounded-pill fw-bold w-100 py-2 shadow-sm">🔥 ลงข้อมูลเริ่มต้นใหม่ทั้งหมด</button>
                     </div>
 
@@ -223,13 +223,20 @@
         let menuData = [], ingredientsData = {}, toppingsData = [], sharedCart = {}, myOrders = {}, allOrders = {};
         let isStoreOpen = true, currentUserRole = 'customer', isFirstLoad = true, soundEnabled = false;
 
+        // UI Window Functions
         window.openSuperModal = (id) => document.getElementById(id).classList.add('active');
         window.closeSuperModal = (id) => document.getElementById(id).classList.remove('active');
         window.showToast = (msg) => { document.getElementById('toast-msg').textContent = msg; new bootstrap.Toast(document.getElementById('liveToast')).show(); };
 
-        // ==========================================
-        // 🔥 DATA SEEDING SCRIPT
-        // ==========================================
+        // 🌟 ฟังก์ชันอัปเดตสถานะในครัว (ปุ่มรับทำ / เสิร์ฟ) 🌟
+        window.updateOrderStatus = (tableKey, itemId, newStatus) => {
+            update(ref(db, `orders/${tableKey}/${itemId}`), { status: newStatus });
+            if (newStatus === 'done' && soundEnabled && 'speechSynthesis' in window) {
+                const ut = new SpeechSynthesisUtterance(`ออเดอร์เสร็จแล้วค่ะ`); ut.lang = 'th-TH'; window.speechSynthesis.speak(ut);
+            }
+        };
+
+        // 🔥 ล้างระบบและลงข้อมูลพื้นฐาน
         window.seedDatabase = async () => {
             if(!confirm("⚠️ คำเตือน: ยืนยันการล้างข้อมูลเมนูและสต็อกเดิมทั้งหมด เพื่อลงข้อมูลใหม่ใช่หรือไม่?")) return;
             
@@ -283,7 +290,7 @@
         };
 
         // ==========================================
-        // ดึงข้อมูล UI
+        // การดึงข้อมูลและจัดการ UI
         // ==========================================
         onValue(ref(db, 'ingredients'), snap => { 
             ingredientsData = snap.val() || {}; 
@@ -304,6 +311,14 @@
         onValue(ref(db, 'menus'), snap => { 
             menuData = Object.values(snap.val() || {}); 
             window.renderMenus(); 
+            // ฟังก์ชันสำหรับแอดมินปิดเปิดเมนูเอง
+            if(document.getElementById('menu-list-container')) {
+                document.getElementById('menu-list-container').innerHTML = menuData.map(m => `
+                    <div class="py-2 border-bottom d-flex justify-content-between align-items-center">
+                        <div><b>${m.name}</b> <span class="text-primary small">฿${m.price}</span></div>
+                        <button onclick="window.toggleMenuStatus('${m.id}', '${m.status}')" class="btn btn-sm ${m.status==='soldout'?'btn-primary':'btn-light border'} rounded-pill px-3">${m.status==='soldout'?'เปิดขาย':'ตั้งหมด'}</button>
+                    </div>`).join('');
+            }
         });
 
         window.updateStock = (id, change) => {
@@ -311,9 +326,17 @@
             update(ref(db, `ingredients/${id}`), { stock: Math.max(0, current + change) });
         };
 
+        window.toggleMenuStatus = (id, currentStatus) => {
+            const newStatus = currentStatus === 'soldout' ? 'available' : 'soldout';
+            update(ref(db, `menus/${id}`), { status: newStatus });
+        };
+
+        window.toggleStoreStatus = (s) => update(ref(db,'settings'), { store_open: s });
+
         window.renderMenus = () => {
             const custHtml = menuData.filter(m => !m.hideFromCustomer).map(m => `
-                <div class="col-6"><div class="menu-card" onclick="window.openToppingModal('${m.id}', 'customer')">
+                <div class="col-6"><div class="menu-card ${m.status==='soldout'?'opacity-50':''}" onclick="window.openToppingModal('${m.id}', 'customer')">
+                    ${m.status==='soldout'?'<div class="soldout-badge">หมด</div>':''}
                     <div class="emoji-icon">${m.emoji}</div>
                     <div class="fw-bold text-dark lh-sm mb-1 text-center">${m.name}</div>
                     <div class="text-primary fw-bold">฿${m.price}</div>
@@ -321,7 +344,8 @@
             if(document.getElementById('cust-menu-grid')) document.getElementById('cust-menu-grid').innerHTML = custHtml;
 
             const adminHtml = menuData.map(m => `
-                <div class="col-6"><div class="menu-card ${m.hideFromCustomer?'bg-light':''}" onclick="window.openToppingModal('${m.id}', 'admin')">
+                <div class="col-6"><div class="menu-card ${m.hideFromCustomer?'bg-light':''} ${m.status==='soldout'?'opacity-50':''}" onclick="window.openToppingModal('${m.id}', 'admin')">
+                    ${m.status==='soldout'?'<div class="soldout-badge">หมด</div>':''}
                     <div class="emoji-icon" style="width:50px;height:50px;font-size:1.5rem;">${m.emoji}</div>
                     <div class="fw-bold small lh-1 mb-1 text-center">${m.name}</div>
                     <div class="text-primary small fw-bold">฿${m.price}</div>
@@ -330,7 +354,7 @@
         };
 
         // ==========================================
-        // Modal & Cart & Pre-order
+        // Modal & Cart Logic
         // ==========================================
         window.updateOrderFields = () => { 
             const isPreorder = document.getElementById('ot-pre').checked;
@@ -339,6 +363,8 @@
 
         window.openToppingModal = (id, role) => {
             const m = menuData.find(x => x.id === id); 
+            if(m.status === 'soldout') return window.showToast("❌ เมนูนี้หมดชั่วคราวครับ");
+
             document.getElementById('top-menu-id').value = m.id; 
             document.getElementById('top-menu-base-price').value = m.price; 
             document.getElementById('top-menu-name').textContent = m.name; 
@@ -405,7 +431,6 @@
             const note = document.getElementById('top-note').value.trim();
             if(note) fullName += ` [${note}]`;
 
-            // ดึงค่าประเภทการสั่งจาก Radio Button
             const orderType = document.querySelector('input[name="order_type_sel"]:checked').value;
             let pTime = ''; let pName = '';
             if(orderType === 'preorder') {
@@ -419,17 +444,14 @@
                 ingredient_id: meatId, order_type: orderType, pickup_time: pTime, customer_name: pName 
             };
             
-            // เช็คว่าสั่งจากแอดมินหรือลูกค้า
             if(document.getElementById('admin-ui').classList.contains('d-flex')) {
-                // ถ้าแอดมินจด POS
                 let target = document.getElementById('adm-c-table').value;
-                if (orderType === 'preorder') target = `Pre-order_${pName}`; // บังคับสร้างโต๊ะพรีออเดอร์
+                if (orderType === 'preorder') target = `Pre-order_${pName}`; 
 
                 push(ref(db, `orders/${target}`), { ...item, status: 'pending', created_at: serverTimestamp() });
                 if(meatId) window.updateStock(meatId, -1); 
-                window.showToast("✅ รับออเดอร์แล้ว");
+                window.showToast("✅ ใส่บิลลูกค้าแล้ว");
             } else {
-                // ลูกค้าสั่งเอง ลงตะกร้า
                 sharedCart[item.id] = item;
                 window.renderCart();
                 window.showToast("🛒 ใส่ตะกร้าแล้ว");
@@ -467,7 +489,7 @@
         };
 
         // ==========================================
-        // Admin: Kitchen & Cashier (KDS)
+        // Admin: Kitchen & Cashier
         // ==========================================
         function startAdminMode(role) {
             document.getElementById('auth-overlay').remove(); 
@@ -501,7 +523,6 @@
             });
         }
 
-        // 🔥 การแสดงผลครัวแบบมัดรวมเป็น "บิล/โต๊ะ" 🔥
         window.renderKitchen = () => {
             let tickets = [];
             Object.entries(allOrders).forEach(([tK, ordersObj]) => {
@@ -527,9 +548,10 @@
 
             document.getElementById('kitchen-all-list').innerHTML = tickets.map((ticket, index) => {
                 let itemsHtml = ticket.items.map(item => {
+                    // ปุ่มอัปเดตสถานะใช้งานได้แล้ว
                     const btn = item.status === 'pending' 
-                        ? `<button onclick="update(ref(db, 'orders/${ticket.tK}/${item.id}'), {status:'preparing'})" class="btn btn-outline-primary rounded-pill btn-sm px-3 fw-bold">รับทำ</button>` 
-                        : `<button onclick="update(ref(db, 'orders/${ticket.tK}/${item.id}'), {status:'done'})" class="btn btn-primary rounded-pill btn-sm px-3 fw-bold shadow-sm">เสิร์ฟ</button>`;
+                        ? `<button onclick="window.updateOrderStatus('${ticket.tK}', '${item.id}', 'preparing')" class="btn btn-outline-primary rounded-pill btn-sm px-3 fw-bold">รับทำ</button>` 
+                        : `<button onclick="window.updateOrderStatus('${ticket.tK}', '${item.id}', 'done')" class="btn btn-primary rounded-pill btn-sm px-3 fw-bold shadow-sm">เสิร์ฟ</button>`;
                     const statusBadge = item.status === 'preparing' ? `<span class="badge bg-primary ms-2">กำลังทำ 🍳</span>` : '';
                     
                     return `
@@ -621,7 +643,7 @@
                     await liff.init({ liffId: LIFF_ID });
                     if (liff.isLoggedIn()) {
                         const uid = (await liff.getProfile()).userId;
-                        startAdminMode('admin'); 
+                        startAdminMode('admin'); // ล็อกอินเป็นแอดมินเพื่อทดสอบ
                     } else { 
                         document.getElementById('auth-loading').classList.add('d-none'); 
                         document.getElementById('login-container').classList.remove('d-none'); 
