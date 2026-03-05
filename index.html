@@ -62,6 +62,11 @@
         .nav-pills .nav-link { color: var(--text-muted); border-radius: 2rem; padding: 10px 20px; transition: 0.3s; }
         .nav-pills .nav-link.active { background-color: var(--primary); color: var(--text-dark); font-weight: bold; box-shadow: 0 4px 12px rgba(216, 180, 226, 0.4); }
         ::-webkit-scrollbar { width: 0px; }
+        
+        /* สไตล์พิเศษสำหรับหน้าครัว */
+        .kitchen-ticket { border: 2px solid var(--white); box-shadow: 0 8px 25px rgba(0,0,0,0.04); background: var(--white); border-radius: 1.5rem; margin-bottom: 20px; overflow: hidden; }
+        .kitchen-ticket-header { background: linear-gradient(135deg, var(--secondary) 0%, var(--primary) 100%); padding: 15px 20px; color: var(--text-dark); display: flex; align-items: center; justify-content: space-between; }
+        .kitchen-ticket-body { padding: 10px 20px; background: #FFF9FA; }
     </style>
 </head>
 <body>
@@ -104,36 +109,40 @@
         </nav>
         <div class="container sticky-top py-3" style="top: 70px; z-index: 1020;">
             <ul class="nav nav-pills nav-fill bg-white rounded-pill shadow-sm p-1 border-0" id="adminTabs" role="tablist">
-                <li class="nav-item"><button class="nav-link active" data-bs-toggle="pill" data-bs-target="#v-kitchen">🔥 ครัว</button></li>
+                <li class="nav-item"><button class="nav-link active" data-bs-toggle="pill" data-bs-target="#v-kitchen">🔥 คิวครัว</button></li>
                 <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#v-cashier">💰 POS</button></li>
                 <li class="nav-item admin-only d-none"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#v-settings">⚙️ ตั้งค่า</button></li>
             </ul>
         </div>
         <div class="tab-content p-3 flex-grow-1">
-            <div class="tab-pane fade show active" id="v-kitchen"><div id="kitchen-all-list" class="d-flex flex-column gap-3"></div></div>
+            
+            <div class="tab-pane fade show active" id="v-kitchen"><div id="kitchen-all-list"></div></div>
+            
             <div class="tab-pane fade" id="v-cashier">
                 <div class="card border-0 shadow-sm rounded-4 mb-3"><div class="card-body">
+                    <p class="small text-muted fw-bold mb-2">เลือกโต๊ะที่ต้องการรับออเดอร์</p>
                     <div class="d-flex gap-2 mb-3">
                         <select id="adm-c-table" onchange="window.renderCashier()" class="form-select rounded-pill fw-bold border-0 bg-light"></select>
                         <button onclick="window.generateQR()" class="btn btn-outline-primary rounded-pill px-3 fw-bold">📱 QR</button>
                     </div>
-                    <button onclick="window.openSuperModal('custom-pos-modal')" class="btn btn-primary w-100 rounded-pill fw-bold py-2">➕ เปิดหน้า POS เพื่อสั่งอาหาร/น้ำ</button>
+                    <button onclick="window.openSuperModal('custom-pos-modal')" class="btn btn-primary w-100 rounded-pill fw-bold py-2 shadow-sm">➕ จดออเดอร์ POS</button>
+                    <p class="small text-muted text-center mt-2 mb-0">💡 สร้างพรีออเดอร์: กด "จดออเดอร์ POS" แล้วเลือก "⏰ จองล่วงหน้า"</p>
                 </div></div>
                 <div class="card border-0 shadow-sm rounded-4 mb-3"><div class="card-body" id="adm-checkout-list" style="max-height: 40vh; overflow-y: auto;"></div></div>
                 <div class="card border-0 shadow-sm rounded-4"><div class="card-body">
                     <div class="d-flex justify-content-between align-items-end mb-3"><span class="fw-bold">ยอดรวม</span><span id="adm-c-total" class="fs-2 fw-bold text-primary">฿0</span></div>
-                    <div class="d-flex gap-2"><button onclick="window.openSuperModal('custom-split-modal')" class="btn btn-light w-50 rounded-pill fw-bold border">✂️ แยกบิล</button><button id="adm-btn-clear" onclick="window.clearTable()" disabled class="btn btn-primary w-50 rounded-pill fw-bold">รับเงิน</button></div>
+                    <div class="d-flex gap-2"><button onclick="window.openSuperModal('custom-split-modal')" class="btn btn-light w-50 rounded-pill fw-bold border">✂️ แยกบิล</button><button id="adm-btn-clear" onclick="window.clearTable()" disabled class="btn btn-primary w-50 rounded-pill fw-bold shadow-sm py-2">รับเงิน / เคลียร์บิล</button></div>
                 </div></div>
             </div>
-            
+
             <div class="tab-pane fade" id="v-settings">
                 <div class="bg-white p-4 rounded-4 shadow-sm border-0 mb-4">
                     <div class="d-flex justify-content-between align-items-center mb-4 pb-3 border-bottom"><div class="fw-bold">เปิดรับออเดอร์</div><div class="form-check form-switch fs-3 m-0"><input class="form-check-input" type="checkbox" id="store-toggle" onchange="window.toggleStoreStatus(this.checked)"></div></div>
                     
                     <div class="p-3 bg-danger-subtle rounded-4 mb-4 text-center border border-danger border-opacity-25">
                         <h6 class="fw-bold text-danger mb-2">⚠️ โซนอันตราย (ล้างฐานข้อมูล)</h6>
-                        <p class="small text-dark opacity-75 mb-3">ระบบจะลบเมนูและสต็อกเก่าทิ้งทั้งหมด แล้วลงข้อมูลพื้นฐาน 16 หมวดอัตโนมัติ</p>
-                        <button onclick="window.seedDatabase()" class="btn btn-danger rounded-pill fw-bold w-100 py-2 shadow-sm">🔥 ล้างระบบและลงข้อมูลใหม่</button>
+                        <p class="small text-dark opacity-75 mb-3">ลบเมนูและสต็อกเก่าทิ้งทั้งหมด เพื่อลงชุดข้อมูลเริ่มต้น 16 หมวด (กะเพรา, ต้มยำ ฯลฯ)</p>
+                        <button onclick="window.seedDatabase()" class="btn btn-danger rounded-pill fw-bold w-100 py-2 shadow-sm">🔥 ลงข้อมูลเริ่มต้นใหม่ทั้งหมด</button>
                     </div>
 
                     <h6 class="fw-bold mt-2 mb-3 text-primary">📦 สต็อกวัตถุดิบเนื้อสัตว์</h6>
@@ -156,6 +165,20 @@
             <div class="text-center mb-3"><h4 class="fw-bold mb-1" id="top-menu-name">เมนู</h4><h5 class="text-primary fw-bold">฿<span id="top-menu-price">0</span></h5></div>
             <input type="hidden" id="top-menu-id"><input type="hidden" id="top-menu-base-price">
             <input type="hidden" id="top-menu-type"> 
+            
+            <div class="order-type-selector mb-4">
+                <input type="radio" id="ot-dine" name="order_type_sel" value="dine_in" checked onchange="window.updateOrderFields()">
+                <label class="order-type-btn" for="ot-dine">🍽️ ทานร้าน</label>
+                <input type="radio" id="ot-take" name="order_type_sel" value="takeaway" onchange="window.updateOrderFields()">
+                <label class="order-type-btn" for="ot-take">🥡 กลับบ้าน</label>
+                <input type="radio" id="ot-pre" name="order_type_sel" value="preorder" onchange="window.updateOrderFields()">
+                <label class="order-type-btn" for="ot-pre">⏰ จองล่วงหน้า</label>
+            </div>
+
+            <div id="pickup-fields" class="d-none bg-warning-subtle p-3 rounded-4 mb-4">
+                <input type="text" id="pickup-name-val" class="input-minimal mb-2 border-0 bg-white" placeholder="ใส่ชื่อลูกค้า (ห้ามลืม!)">
+                <input type="time" id="pickup-time-val" class="input-minimal fw-bold border-0 bg-white">
+            </div>
             
             <div id="food-options-container">
                 <h6 class="fw-bold text-dark mb-2">เลือกเนื้อสัตว์ / เส้น <span class="text-danger">*</span></h6>
@@ -198,14 +221,14 @@
         const tableNo = urlParams.get('table'); const token = urlParams.get('token');
         
         let menuData = [], ingredientsData = {}, toppingsData = [], sharedCart = {}, myOrders = {}, allOrders = {};
-        let posActiveTable = '', isStoreOpen = true, currentUserRole = 'customer', isFirstLoad = true, soundEnabled = false;
+        let isStoreOpen = true, currentUserRole = 'customer', isFirstLoad = true, soundEnabled = false;
 
         window.openSuperModal = (id) => document.getElementById(id).classList.add('active');
         window.closeSuperModal = (id) => document.getElementById(id).classList.remove('active');
         window.showToast = (msg) => { document.getElementById('toast-msg').textContent = msg; new bootstrap.Toast(document.getElementById('liveToast')).show(); };
 
         // ==========================================
-        // 🔥 DATA SEEDING SCRIPT (ล้างข้อมูลและลงใหม่)
+        // 🔥 DATA SEEDING SCRIPT
         // ==========================================
         window.seedDatabase = async () => {
             if(!confirm("⚠️ คำเตือน: ยืนยันการล้างข้อมูลเมนูและสต็อกเดิมทั้งหมด เพื่อลงข้อมูลใหม่ใช่หรือไม่?")) return;
@@ -220,9 +243,8 @@
                 'i7': { id: 'i7', name: 'หมึก', stock: 30, price: 20 },
                 'i8': { id: 'i8', name: 'รวมมิตรทะเล', stock: 20, price: 25 },
                 'i9': { id: 'i9', name: 'ปลาดุกชิ้น', stock: 20, price: 10 },
-                'i10': { id: 'i10', name: 'เส้นก๋วยเตี๋ยว', stock: 50, price: 0 },
-                'i11': { id: 'i11', name: 'หมี่เหลือง', stock: 50, price: 0 },
-                'i12': { id: 'i12', name: 'ไม่มีเนื้อสัตว์ (ข้าวเปล่า/น้ำ)', stock: 999, price: 0 }
+                'i10': { id: 'i10', name: 'เส้นใหญ่', stock: 50, price: 0 },
+                'i11': { id: 'i11', name: 'หมี่เหลือง', stock: 50, price: 0 }
             };
 
             const initialMenus = {
@@ -261,7 +283,7 @@
         };
 
         // ==========================================
-        // การดึงข้อมูลและจัดการ UI
+        // ดึงข้อมูล UI
         // ==========================================
         onValue(ref(db, 'ingredients'), snap => { 
             ingredientsData = snap.val() || {}; 
@@ -308,8 +330,13 @@
         };
 
         // ==========================================
-        // Modal & Cart Logic
+        // Modal & Cart & Pre-order
         // ==========================================
+        window.updateOrderFields = () => { 
+            const isPreorder = document.getElementById('ot-pre').checked;
+            document.getElementById('pickup-fields').classList.toggle('d-none', !isPreorder); 
+        };
+
         window.openToppingModal = (id, role) => {
             const m = menuData.find(x => x.id === id); 
             document.getElementById('top-menu-id').value = m.id; 
@@ -317,13 +344,14 @@
             document.getElementById('top-menu-name').textContent = m.name; 
             document.getElementById('top-menu-type').value = m.type; 
             document.getElementById('top-note').value = ''; 
+            document.getElementById('ot-dine').checked = true;
+            window.updateOrderFields();
             
             if (m.type === 'drink') {
                 document.getElementById('food-options-container').classList.add('d-none');
             } else {
                 document.getElementById('food-options-container').classList.remove('d-none');
-                
-                const meats = Object.values(ingredientsData).filter(i => i.id !== 'i12'); 
+                const meats = Object.values(ingredientsData); 
                 document.getElementById('dynamic-meats').innerHTML = meats.map((meat, i) => {
                     const isOut = meat.stock <= 0;
                     return `
@@ -367,10 +395,9 @@
 
             if (m.type === 'food') {
                 const meatEl = document.querySelector('input[name="meat_sel"]:checked');
-                if(!meatEl) return alert('กรุณาเลือกเนื้อสัตว์ครับ');
+                if(!meatEl) return alert('กรุณาเลือกเนื้อสัตว์หรือเส้นครับ');
                 meatId = meatEl.value;
                 const meatName = meatEl.dataset.name;
-                
                 let tops = []; document.querySelectorAll('.topping-chk:checked').forEach(c => tops.push(c.value));
                 fullName = `${m.name} ${meatName} ${tops.length ? `(+${tops.join(',')})` : ''}`;
             }
@@ -378,14 +405,31 @@
             const note = document.getElementById('top-note').value.trim();
             if(note) fullName += ` [${note}]`;
 
-            const item = { id: 'c_'+Date.now(), menu_id: m.id, name: fullName, price: finalP, quantity: 1, ingredient_id: meatId };
+            // ดึงค่าประเภทการสั่งจาก Radio Button
+            const orderType = document.querySelector('input[name="order_type_sel"]:checked').value;
+            let pTime = ''; let pName = '';
+            if(orderType === 'preorder') {
+                pTime = document.getElementById('pickup-time-val').value;
+                pName = document.getElementById('pickup-name-val').value.trim();
+                if(!pTime || !pName) return window.showToast("❌ กรุณาระบุชื่อและเวลารับของพรีออเดอร์ครับ");
+            }
+
+            const item = { 
+                id: 'c_'+Date.now(), menu_id: m.id, name: fullName, price: finalP, quantity: 1, 
+                ingredient_id: meatId, order_type: orderType, pickup_time: pTime, customer_name: pName 
+            };
             
+            // เช็คว่าสั่งจากแอดมินหรือลูกค้า
             if(document.getElementById('admin-ui').classList.contains('d-flex')) {
-                const target = document.getElementById('adm-c-table').value;
+                // ถ้าแอดมินจด POS
+                let target = document.getElementById('adm-c-table').value;
+                if (orderType === 'preorder') target = `Pre-order_${pName}`; // บังคับสร้างโต๊ะพรีออเดอร์
+
                 push(ref(db, `orders/${target}`), { ...item, status: 'pending', created_at: serverTimestamp() });
                 if(meatId) window.updateStock(meatId, -1); 
-                window.showToast("✅ ใส่บิลลูกค้าแล้ว");
+                window.showToast("✅ รับออเดอร์แล้ว");
             } else {
+                // ลูกค้าสั่งเอง ลงตะกร้า
                 sharedCart[item.id] = item;
                 window.renderCart();
                 window.showToast("🛒 ใส่ตะกร้าแล้ว");
@@ -401,7 +445,6 @@
                     <div><b>${i.name}</b><br><span class="text-primary fw-bold">฿${i.price*i.quantity}</span></div>
                     <div class="fw-bold px-3 py-1 bg-light rounded-pill">x${i.quantity}</div></div>`;
             }).join('') || '<div class="text-center py-5">ว่างเปล่า</div>';
-            
             document.getElementById('cust-total').textContent = `฿${tot}`;
             if(cartL.length) { document.getElementById('fab-cart-container').classList.remove('d-none'); document.getElementById('cart-count-fab').textContent = cartL.length; }
             else { document.getElementById('fab-cart-container').classList.add('d-none'); }
@@ -413,7 +456,8 @@
             const list = Object.values(sharedCart); 
             try {
                 for(let i of list) { 
-                    await push(ref(db, `orders/${tableNo}`), { ...i, status: 'pending', created_at: serverTimestamp() }); 
+                    const target = i.order_type === 'preorder' ? `Pre-order_${i.customer_name}` : tableNo;
+                    await push(ref(db, `orders/${target}`), { ...i, status: 'pending', created_at: serverTimestamp() }); 
                     if(i.ingredient_id) await window.updateStock(i.ingredient_id, -i.quantity); 
                 }
                 sharedCart = {}; window.renderCart(); 
@@ -423,17 +467,13 @@
         };
 
         // ==========================================
-        // Admin & POS Logic
+        // Admin: Kitchen & Cashier (KDS)
         // ==========================================
         function startAdminMode(role) {
             document.getElementById('auth-overlay').remove(); 
             document.getElementById('admin-ui').classList.replace('d-none', 'd-flex');
             document.getElementById('admin-role-badge').textContent = role === 'admin' ? "(แอดมิน)" : "(พนักงาน)";
-
-            // ⚠️ จุดนี้แหละครับที่หายไป ผมเติมกลับมาให้แล้วครับ!
-            if(role === 'admin') {
-                document.querySelectorAll('.admin-only').forEach(e => e.classList.remove('d-none'));
-            }
+            if(role === 'admin') document.querySelectorAll('.admin-only').forEach(e => e.classList.remove('d-none'));
 
             onValue(ref(db, 'orders'), snap => {
                 const all = snap.val() || {}; allOrders = all; 
@@ -450,7 +490,7 @@
                                 if(soundEnabled) {
                                     document.getElementById('dingdong-sound').play().catch(()=>{});
                                     if('speechSynthesis' in window) {
-                                        const ut = new SpeechSynthesisUtterance(`ออเดอร์เข้าใหม่จ้า โต๊ะ ${tK} ${item.name}`); ut.lang = 'th-TH'; window.speechSynthesis.speak(ut);
+                                        const ut = new SpeechSynthesisUtterance(`ออเดอร์ใหม่ โต๊ะ ${tK.replace('Pre-order_','พรีออเดอร์ ')}`); ut.lang = 'th-TH'; window.speechSynthesis.speak(ut);
                                     }
                                 }
                                 window.showToast(`🔥 ออเดอร์ใหม่: ${tK}`);
@@ -461,15 +501,58 @@
             });
         }
 
+        // 🔥 การแสดงผลครัวแบบมัดรวมเป็น "บิล/โต๊ะ" 🔥
         window.renderKitchen = () => {
-            let q = [];
-            Object.entries(allOrders).forEach(([tK, orders]) => { Object.entries(orders).forEach(([id, item]) => { if(item.status !== 'done') q.push({ tK, id, ...item }); }); });
-            q.sort((a,b) => a.created_at - b.created_at);
+            let tickets = [];
+            Object.entries(allOrders).forEach(([tK, ordersObj]) => {
+                const items = Object.entries(ordersObj).map(([id, item]) => ({ id, ...item }));
+                const pendingItems = items.filter(i => i.status !== 'done');
+                
+                if (pendingItems.length > 0) {
+                    const earliest = Math.min(...pendingItems.map(i => i.created_at || Date.now()));
+                    const isPreorder = tK.startsWith('Pre-order_');
+                    let title = isPreorder ? `พรีออเดอร์: คุณ ${tK.replace('Pre-order_', '')}` : `โต๊ะ: ${tK}`;
+                    
+                    let pTime = isPreorder ? pendingItems.find(i => i.pickup_time)?.pickup_time || '' : '';
+                    let typeTag = isPreorder ? `<span class="badge bg-warning text-dark ms-2 shadow-sm">⏰ รับ: ${pTime}</span>` : '';
+                    
+                    if(!isPreorder && pendingItems[0]?.order_type === 'takeaway') typeTag = `<span class="badge bg-secondary ms-2 shadow-sm">🥡 กลับบ้าน</span>`;
+                    else if(!isPreorder) typeTag = `<span class="badge bg-white text-primary ms-2 shadow-sm">🍽️ ทานร้าน</span>`;
 
-            document.getElementById('kitchen-all-list').innerHTML = q.map((item, index) => {
-                const btn = item.status === 'pending' ? `<button onclick="update(ref(db, 'orders/${item.tK}/${item.id}'), {status:'preparing'})" class="btn btn-outline-primary rounded-pill btn-sm px-4 fw-bold py-2">📥 รับทำ</button>` : `<button onclick="update(ref(db, 'orders/${item.tK}/${item.id}'), {status:'done'})" class="btn btn-primary rounded-pill btn-sm px-4 fw-bold shadow-sm py-2">✅ เสิร์ฟ</button>`;
-                return `<div class="card border-0 shadow-sm rounded-4 mb-3"><div class="card-body p-3 d-flex justify-content-between align-items-center"><div class="d-flex align-items-center gap-3"><div class="bg-primary-subtle rounded-circle d-flex align-items-center justify-content-center fw-bold text-dark" style="width:45px;height:45px; font-size:1.2rem;">${index+1}</div><div><div class="fw-bold text-primary small">โต๊ะ: ${item.tK}</div><div class="fw-bold text-dark mt-1 fs-6">${item.name}</div></div></div>${btn}</div></div>`;
-            }).join('') || '<div class="text-center py-5 text-muted">คิวว่างครับ ☕</div>';
+                    tickets.push({ tK, title, typeTag, items: pendingItems, created_at: earliest });
+                }
+            });
+
+            tickets.sort((a,b) => a.created_at - b.created_at);
+
+            document.getElementById('kitchen-all-list').innerHTML = tickets.map((ticket, index) => {
+                let itemsHtml = ticket.items.map(item => {
+                    const btn = item.status === 'pending' 
+                        ? `<button onclick="update(ref(db, 'orders/${ticket.tK}/${item.id}'), {status:'preparing'})" class="btn btn-outline-primary rounded-pill btn-sm px-3 fw-bold">รับทำ</button>` 
+                        : `<button onclick="update(ref(db, 'orders/${ticket.tK}/${item.id}'), {status:'done'})" class="btn btn-primary rounded-pill btn-sm px-3 fw-bold shadow-sm">เสิร์ฟ</button>`;
+                    const statusBadge = item.status === 'preparing' ? `<span class="badge bg-primary ms-2">กำลังทำ 🍳</span>` : '';
+                    
+                    return `
+                    <div class="d-flex justify-content-between align-items-center py-2 border-bottom border-light">
+                        <div class="pe-2">
+                            <span class="fw-bold text-primary me-1 fs-6">x${item.quantity}</span>
+                            <span class="fw-bold text-dark" style="font-size:0.95rem;">${item.name}</span>${statusBadge}
+                        </div>
+                        <div class="text-end" style="min-width: 75px;">${btn}</div>
+                    </div>`;
+                }).join('');
+
+                return `
+                <div class="kitchen-ticket">
+                    <div class="kitchen-ticket-header">
+                        <div class="d-flex align-items-center gap-2">
+                            <div class="bg-white text-primary rounded-circle d-flex align-items-center justify-content-center fw-bold shadow-sm" style="width:35px;height:35px;font-size:1.1rem;">${index+1}</div>
+                            <div class="fw-bold fs-5 m-0 lh-1">${ticket.title} ${ticket.typeTag}</div>
+                        </div>
+                    </div>
+                    <div class="kitchen-ticket-body">${itemsHtml}</div>
+                </div>`;
+            }).join('') || '<div class="text-center py-5 text-muted"><div style="font-size:3rem; margin-bottom:10px;">☕</div>คิวว่างครับ</div>';
         };
 
         window.renderCashier = () => {
@@ -487,6 +570,11 @@
             let opt = ``;
             for(let i=1; i<=10; i++) opt += `<option value="โต๊ะ ${i}">โต๊ะ ${i}</option>`;
             opt += `<option value="ซุ้ม 1">ซุ้ม 1</option><option value="ซุ้ม 2">ซุ้ม 2</option>`;
+            Object.keys(allOrders).forEach(k => { 
+                if(k.startsWith('Pre-order_') && !opt.includes(`value="${k}"`)) {
+                    opt += `<option value="${k}">⭐ ${k.replace('Pre-order_','พรีออเดอร์: ')}</option>`; 
+                }
+            });
             sel.innerHTML = opt; sel.value = cur || 'โต๊ะ 1';
             document.getElementById('pos-target-table').innerText = sel.value;
         };
@@ -503,6 +591,7 @@
 
         window.generateQR = () => {
             const t = document.getElementById('adm-c-table').value;
+            if (t.startsWith('Pre-order_')) return window.showToast("❌ พรีออเดอร์ไม่มี QR ให้สแกนครับ");
             const sessionToken = Date.now().toString(36);
             set(ref(db, `table_sessions/${t}`), sessionToken);
             const baseUrl = window.location.href.split('?')[0]; 
@@ -519,9 +608,6 @@
             window.showToast("🔊 เปิดเสียงแจ้งเตือนแล้ว");
         };
 
-        // ==========================================
-        // INIT & AUTH
-        // ==========================================
         async function initSystem() {
             try {
                 if (tableNo && token) {
@@ -530,12 +616,12 @@
                         document.getElementById('auth-overlay').remove(); 
                         document.getElementById('customer-ui').classList.replace('d-none', 'd-flex'); 
                         document.getElementById('cust-table-no').textContent = tableNo;
-                    } else { throw new Error("QR โต๊ะหมดอายุครับ"); }
+                    } else { throw new Error("QR โต๊ะหมดอายุครับ แอดมินต้องสร้างให้ใหม่"); }
                 } else {
                     await liff.init({ liffId: LIFF_ID });
                     if (liff.isLoggedIn()) {
                         const uid = (await liff.getProfile()).userId;
-                        startAdminMode('admin'); // สำหรับทดสอบให้เป็น Admin ไว้ก่อน
+                        startAdminMode('admin'); 
                     } else { 
                         document.getElementById('auth-loading').classList.add('d-none'); 
                         document.getElementById('login-container').classList.remove('d-none'); 
