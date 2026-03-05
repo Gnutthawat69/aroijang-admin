@@ -125,6 +125,7 @@
                     <div class="d-flex gap-2"><button onclick="window.openSuperModal('custom-split-modal')" class="btn btn-light w-50 rounded-pill fw-bold border">✂️ แยกบิล</button><button id="adm-btn-clear" onclick="window.clearTable()" disabled class="btn btn-primary w-50 rounded-pill fw-bold">รับเงิน</button></div>
                 </div></div>
             </div>
+            
             <div class="tab-pane fade" id="v-settings">
                 <div class="bg-white p-4 rounded-4 shadow-sm border-0 mb-4">
                     <div class="d-flex justify-content-between align-items-center mb-4 pb-3 border-bottom"><div class="fw-bold">เปิดรับออเดอร์</div><div class="form-check form-switch fs-3 m-0"><input class="form-check-input" type="checkbox" id="store-toggle" onchange="window.toggleStoreStatus(this.checked)"></div></div>
@@ -132,7 +133,7 @@
                     <div class="p-3 bg-danger-subtle rounded-4 mb-4 text-center border border-danger border-opacity-25">
                         <h6 class="fw-bold text-danger mb-2">⚠️ โซนอันตราย (ล้างฐานข้อมูล)</h6>
                         <p class="small text-dark opacity-75 mb-3">ระบบจะลบเมนูและสต็อกเก่าทิ้งทั้งหมด แล้วลงข้อมูลพื้นฐาน 16 หมวดอัตโนมัติ</p>
-                        <button onclick="window.seedDatabase()" class="btn btn-danger rounded-pill fw-bold w-100 py-2">🔥 ล้างระบบและลงข้อมูลใหม่</button>
+                        <button onclick="window.seedDatabase()" class="btn btn-danger rounded-pill fw-bold w-100 py-2 shadow-sm">🔥 ล้างระบบและลงข้อมูลใหม่</button>
                     </div>
 
                     <h6 class="fw-bold mt-2 mb-3 text-primary">📦 สต็อกวัตถุดิบเนื้อสัตว์</h6>
@@ -154,7 +155,9 @@
         <div class="super-modal-box">
             <div class="text-center mb-3"><h4 class="fw-bold mb-1" id="top-menu-name">เมนู</h4><h5 class="text-primary fw-bold">฿<span id="top-menu-price">0</span></h5></div>
             <input type="hidden" id="top-menu-id"><input type="hidden" id="top-menu-base-price">
-            <input type="hidden" id="top-menu-type"> <div id="food-options-container">
+            <input type="hidden" id="top-menu-type"> 
+            
+            <div id="food-options-container">
                 <h6 class="fw-bold text-dark mb-2">เลือกเนื้อสัตว์ / เส้น <span class="text-danger">*</span></h6>
                 <div class="meat-grid mb-4" id="dynamic-meats"></div>
 
@@ -207,7 +210,6 @@
         window.seedDatabase = async () => {
             if(!confirm("⚠️ คำเตือน: ยืนยันการล้างข้อมูลเมนูและสต็อกเดิมทั้งหมด เพื่อลงข้อมูลใหม่ใช่หรือไม่?")) return;
             
-            // 1. ลงข้อมูลวัตถุดิบเนื้อสัตว์/เส้น (Ingredients)
             const initialIngredients = {
                 'i1': { id: 'i1', name: 'หมูสับ', stock: 50, price: 0 },
                 'i2': { id: 'i2', name: 'หมูชิ้น', stock: 50, price: 0 },
@@ -223,7 +225,6 @@
                 'i12': { id: 'i12', name: 'ไม่มีเนื้อสัตว์ (ข้าวเปล่า/น้ำ)', stock: 999, price: 0 }
             };
 
-            // 2. ลงข้อมูลเมนูหลัก (Menus)
             const initialMenus = {
                 'm1': { id: 'm1', name: 'ข้าวกะเพรา', price: 40, emoji: '🍛', type: 'food' },
                 'm2': { id: 'm2', name: 'ข้าวผัด', price: 40, emoji: '🍚', type: 'food' },
@@ -241,15 +242,13 @@
                 'm14': { id: 'm14', name: 'หมี่ผัดซอส', price: 40, emoji: '🍝', type: 'food' },
                 'm15': { id: 'm15', name: 'สุกี้แห้ง', price: 45, emoji: '🥘', type: 'food' },
                 'm16': { id: 'm16', name: 'สุกี้น้ำ', price: 45, emoji: '🍲', type: 'food' },
-                'm17': { id: 'm17', name: 'ข้าวเปล่า', price: 10, emoji: '🍚', type: 'drink' }, // ให้ type=drink เพื่อไม่ให้ถามหาเนื้อสัตว์
-                // เมนูน้ำดื่ม (ซ่อนจากลูกค้า)
-                'd1': { id: 'd1', name: 'น้ำอัดลม (โค้ก/สไปรท์)', price: 15, emoji: '🥤', type: 'drink', hideFromCustomer: true },
+                'm17': { id: 'm17', name: 'ข้าวเปล่า', price: 10, emoji: '🍚', type: 'drink' }, 
+                'd1': { id: 'd1', name: 'น้ำอัดลม', price: 15, emoji: '🥤', type: 'drink', hideFromCustomer: true },
                 'd2': { id: 'd2', name: 'น้ำเปล่า', price: 10, emoji: '💧', type: 'drink', hideFromCustomer: true },
                 'd3': { id: 'd3', name: 'น้ำแข็ง (แก้ว)', price: 2, emoji: '🧊', type: 'drink', hideFromCustomer: true },
                 'd4': { id: 'd4', name: 'น้ำแข็ง (ถัง)', price: 10, emoji: '🧊', type: 'drink', hideFromCustomer: true }
             };
 
-            // 3. ท็อปปิ้ง
             const initialToppings = {
                 't1': { id: 't1', name: 'ไข่ดาว', price: 10 },
                 't2': { id: 't2', name: 'ไข่เจียว', price: 15 }
@@ -291,7 +290,6 @@
         };
 
         window.renderMenus = () => {
-            // ของลูกค้า: แสดงเฉพาะเมนูที่ไม่ซ่อน
             const custHtml = menuData.filter(m => !m.hideFromCustomer).map(m => `
                 <div class="col-6"><div class="menu-card" onclick="window.openToppingModal('${m.id}', 'customer')">
                     <div class="emoji-icon">${m.emoji}</div>
@@ -300,7 +298,6 @@
                 </div></div>`).join('');
             if(document.getElementById('cust-menu-grid')) document.getElementById('cust-menu-grid').innerHTML = custHtml;
 
-            // ของแอดมิน (POS): แสดงทั้งหมด รวมถึงน้ำ
             const adminHtml = menuData.map(m => `
                 <div class="col-6"><div class="menu-card ${m.hideFromCustomer?'bg-light':''}" onclick="window.openToppingModal('${m.id}', 'admin')">
                     <div class="emoji-icon" style="width:50px;height:50px;font-size:1.5rem;">${m.emoji}</div>
@@ -326,8 +323,7 @@
             } else {
                 document.getElementById('food-options-container').classList.remove('d-none');
                 
-                // เรนเดอร์เนื้อสัตว์ (เช็คสต็อก)
-                const meats = Object.values(ingredientsData).filter(i => i.id !== 'i12'); // ไม่เอาข้าวเปล่ามาแสดงในเนื้อสัตว์
+                const meats = Object.values(ingredientsData).filter(i => i.id !== 'i12'); 
                 document.getElementById('dynamic-meats').innerHTML = meats.map((meat, i) => {
                     const isOut = meat.stock <= 0;
                     return `
@@ -340,7 +336,6 @@
                     </label>`;
                 }).join('');
 
-                // เรนเดอร์ท็อปปิ้ง
                 document.getElementById('dynamic-toppings').innerHTML = toppingsData.map(t => `
                     <label class="d-flex justify-content-between p-3 bg-white rounded-4 border mb-2 align-items-center">
                         <div class="d-flex gap-2 align-items-center">
@@ -385,14 +380,12 @@
 
             const item = { id: 'c_'+Date.now(), menu_id: m.id, name: fullName, price: finalP, quantity: 1, ingredient_id: meatId };
             
-            // ถ้าแอดมินกดสั่ง (POS) ยิงเข้า Database เลย
             if(document.getElementById('admin-ui').classList.contains('d-flex')) {
                 const target = document.getElementById('adm-c-table').value;
                 push(ref(db, `orders/${target}`), { ...item, status: 'pending', created_at: serverTimestamp() });
-                if(meatId) window.updateStock(meatId, -1); // ตัดสต็อก POS
+                if(meatId) window.updateStock(meatId, -1); 
                 window.showToast("✅ ใส่บิลลูกค้าแล้ว");
             } else {
-                // ลูกค้ากดลงตะกร้าตัวเอง
                 sharedCart[item.id] = item;
                 window.renderCart();
                 window.showToast("🛒 ใส่ตะกร้าแล้ว");
@@ -421,7 +414,7 @@
             try {
                 for(let i of list) { 
                     await push(ref(db, `orders/${tableNo}`), { ...i, status: 'pending', created_at: serverTimestamp() }); 
-                    if(i.ingredient_id) await window.updateStock(i.ingredient_id, -i.quantity); // ตัดสต็อก
+                    if(i.ingredient_id) await window.updateStock(i.ingredient_id, -i.quantity); 
                 }
                 sharedCart = {}; window.renderCart(); 
                 bootstrap.Offcanvas.getInstance(document.getElementById('cartOffcanvas')).hide(); 
@@ -436,6 +429,11 @@
             document.getElementById('auth-overlay').remove(); 
             document.getElementById('admin-ui').classList.replace('d-none', 'd-flex');
             document.getElementById('admin-role-badge').textContent = role === 'admin' ? "(แอดมิน)" : "(พนักงาน)";
+
+            // ⚠️ จุดนี้แหละครับที่หายไป ผมเติมกลับมาให้แล้วครับ!
+            if(role === 'admin') {
+                document.querySelectorAll('.admin-only').forEach(e => e.classList.remove('d-none'));
+            }
 
             onValue(ref(db, 'orders'), snap => {
                 const all = snap.val() || {}; allOrders = all; 
@@ -485,7 +483,6 @@
             document.getElementById('adm-c-total').textContent = `฿${tot}`; 
             document.getElementById('adm-btn-clear').disabled = !items.length;
             
-            // โต๊ะทั้งหมดที่ร้านมี
             const sel = document.getElementById('adm-c-table'); const cur = sel.value;
             let opt = ``;
             for(let i=1; i<=10; i++) opt += `<option value="โต๊ะ ${i}">โต๊ะ ${i}</option>`;
@@ -538,7 +535,7 @@
                     await liff.init({ liffId: LIFF_ID });
                     if (liff.isLoggedIn()) {
                         const uid = (await liff.getProfile()).userId;
-                        startAdminMode('admin'); // เพื่อความง่ายในการทดสอบ ให้ทุกคนที่ล็อคอินเป็น Admin หมด
+                        startAdminMode('admin'); // สำหรับทดสอบให้เป็น Admin ไว้ก่อน
                     } else { 
                         document.getElementById('auth-loading').classList.add('d-none'); 
                         document.getElementById('login-container').classList.remove('d-none'); 
