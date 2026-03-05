@@ -37,7 +37,7 @@
         .btn-outline-primary { border-color: var(--primary); color: var(--text-dark); }
         .btn-outline-primary:hover { background-color: var(--primary); color: var(--text-dark); border-color: var(--primary); }
         .bg-primary-subtle { background-color: var(--secondary) !important; color: var(--text-dark) !important; }
-        .text-primary { color: #B388BE !important; } /* ม่วงเข้มขึ้นนิดนึงสำหรับตัวหนังสือ */
+        .text-primary { color: #B388BE !important; }
 
         /* 🌸 หน้า Login (Auth Overlay) */
         #auth-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 9999999; background: linear-gradient(135deg, #FFF9FA 0%, #FFE4E6 100%); display: flex; flex-direction: column; align-items: center; justify-content: center; overflow: hidden; }
@@ -62,25 +62,22 @@
         .input-minimal { width: 100%; padding: 12px 16px; border: 2px solid #F0E6F2; border-radius: 1rem; background: var(--white); outline: none; transition: 0.3s; color: var(--text-dark); }
         .input-minimal:focus { border-color: var(--primary); }
 
-        /* 🚀 SUPER MODALS (ปรับให้ขอบมนและนุ่มนวล) */
+        /* 🚀 SUPER MODALS */
         .super-modal-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(90, 74, 94, 0.4); backdrop-filter: blur(5px); z-index: 99999; display: flex; align-items: center; justify-content: center; padding: 20px; visibility: hidden; opacity: 0; transition: 0.3s ease; }
         .super-modal-overlay.active { visibility: visible; opacity: 1; }
         .super-modal-box { background: var(--white); width: 100%; max-width: 420px; border-radius: 2rem; padding: 30px 25px; box-shadow: var(--shadow-soft); transform: translateY(20px); transition: 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
         .super-modal-overlay.active .super-modal-box { transform: translateY(0); }
 
-        /* ตัวเลือกทานร้าน/กลับบ้าน แบบ Pill */
         .order-type-selector { display: flex; gap: 8px; background: #F8F0FA; padding: 5px; border-radius: 2rem; }
         .order-type-btn { flex: 1; padding: 10px 5px; border-radius: 1.5rem; text-align: center; font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: 0.3s; color: var(--text-muted); margin: 0; }
         input[name="order_type_sel"] { display: none; }
         input[name="order_type_sel"]:checked + label { background: var(--white); color: var(--text-dark); box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
 
-        /* Admin Tabs มินิมอล */
         .nav-pills .nav-link { color: var(--text-muted); border-radius: 2rem; padding: 10px 20px; transition: 0.3s; }
         .nav-pills .nav-link.active { background-color: var(--primary); color: var(--text-dark); box-shadow: 0 4px 12px rgba(216, 180, 226, 0.4); }
 
         ::-webkit-scrollbar { width: 0px; }
         
-        /* การตั้งค่าระบบ Print QR Code ให้เนียนตา */
         @media print { 
             body * { visibility: hidden; } 
             #custom-qr-modal, #custom-qr-modal * { visibility: visible; } 
@@ -194,13 +191,21 @@
                         <div class="fw-bold">สถานะเปิดรับออเดอร์</div>
                         <div class="form-check form-switch fs-3 m-0"><input class="form-check-input" type="checkbox" id="store-toggle" onchange="window.toggleStoreStatus(this.checked)"></div>
                     </div>
-                    <h6 class="fw-bold mb-3">เพิ่มเมนูใหม่</h6>
+                    
+                    <h6 class="fw-bold mb-3" id="menu-form-title">เพิ่มเมนูใหม่</h6>
                     <input type="hidden" id="m-edit-id">
                     <input type="text" id="m-name" class="input-minimal mb-2" placeholder="ชื่อเมนู">
-                    <div class="d-flex gap-2 mb-3"><input type="number" id="m-price" class="input-minimal" placeholder="ราคา"><input type="text" id="m-emoji" class="input-minimal text-center" placeholder="รูป 🍜"></div>
-                    <button onclick="window.saveMenu()" class="btn btn-primary w-100 rounded-pill py-2 fw-bold mb-4">บันทึกเมนู</button>
+                    <div class="d-flex gap-2 mb-3">
+                        <input type="number" id="m-price" class="input-minimal" placeholder="ราคา">
+                        <input type="text" id="m-emoji" class="input-minimal text-center" placeholder="รูป 🍜">
+                    </div>
                     
-                    <h6 class="fw-bold mb-3">จัดการเมนู</h6>
+                    <div class="d-flex gap-2 mb-4">
+                        <button id="btn-cancel-menu" onclick="window.cancelEditMenu()" class="btn btn-light rounded-pill py-2 fw-bold d-none w-50 border">ยกเลิก</button>
+                        <button id="btn-save-menu" onclick="window.saveMenu()" class="btn btn-primary rounded-pill py-2 fw-bold flex-fill">บันทึกเมนู</button>
+                    </div>
+                    
+                    <h6 class="fw-bold mb-3">จัดการเมนู (แก้ไข/เปิด-ปิด)</h6>
                     <div id="menu-list-container"></div>
                     
                     <h6 class="fw-bold mt-4 mb-3">จัดการพนักงาน</h6>
@@ -351,17 +356,13 @@
                 return;
             }
             
-            // สร้าง Token แบบสุ่มเพื่อความปลอดภัย
             const sessionToken = Date.now().toString(36);
             set(ref(db, `table_sessions/${t}`), sessionToken);
             
-            // สร้าง URL ลิงก์ร้านของคุณ (ดึงจาก URL ปัจจุบันที่ใช้งานอยู่)
             const baseUrl = window.location.href.split('?')[0]; 
             const orderUrl = `${baseUrl}?table=${encodeURIComponent(t)}&token=${sessionToken}`;
             
-            // ใส่ข้อมูลลงหน้าต่าง Modal
             document.getElementById('qr-label').innerText = t;
-            // ใช้ API สร้างรูป QR Code ฟรี
             document.getElementById('qr-img').src = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(orderUrl)}&margin=10`;
             
             window.openSuperModal('custom-qr-modal');
@@ -371,10 +372,63 @@
             window.print();
         };
 
-        // ฟังก์ชันฐานข้อมูลอื่นๆ
+        // การจัดการผู้ใช้งาน (พนักงาน)
         window.approveUser = (uid) => {
             update(ref(db, `users/${uid}`), { role: 'staff' });
             window.showToast("✅ อนุมัติสิทธิ์พนักงานเรียบร้อย");
+        };
+
+        // ระบบแก้ไขเมนูอาหาร 
+        window.editMenu = (id, name, price, emoji) => {
+            document.getElementById('m-edit-id').value = id;
+            document.getElementById('m-name').value = name;
+            document.getElementById('m-price').value = price;
+            document.getElementById('m-emoji').value = emoji;
+            
+            document.getElementById('menu-form-title').innerText = "แก้ไขข้อมูลเมนู";
+            document.getElementById('btn-save-menu').innerText = "อัปเดตข้อมูล";
+            document.getElementById('btn-cancel-menu').classList.remove('d-none');
+            
+            // เลื่อนจอขึ้นไปที่ฟอร์ม
+            document.getElementById('m-name').focus();
+            window.scrollTo(0, 0);
+        };
+
+        window.cancelEditMenu = () => {
+            document.getElementById('m-edit-id').value = '';
+            document.getElementById('m-name').value = '';
+            document.getElementById('m-price').value = '';
+            document.getElementById('m-emoji').value = '';
+            
+            document.getElementById('menu-form-title').innerText = "เพิ่มเมนูใหม่";
+            document.getElementById('btn-save-menu').innerText = "บันทึกเมนู";
+            document.getElementById('btn-cancel-menu').classList.add('d-none');
+        };
+
+        window.saveMenu = () => { 
+            const id = document.getElementById('m-edit-id').value;
+            const name = document.getElementById('m-name').value;
+            const price = Number(document.getElementById('m-price').value);
+            const emoji = document.getElementById('m-emoji').value || '🍽️';
+
+            if (!name || !price) {
+                window.showToast("❌ กรุณาใส่ชื่อและราคาให้ครบถ้วน");
+                return;
+            }
+
+            if (id) {
+                // อัปเดตเมนูเดิม
+                update(ref(db, `menus/${id}`), { name, price, emoji });
+                window.showToast("✅ อัปเดตเมนูเรียบร้อย");
+            } else {
+                // สร้างเมนูใหม่
+                const newId = 'm' + Date.now();
+                set(ref(db, `menus/${newId}`), { id: newId, name, price, emoji, status: 'available' });
+                window.showToast("✅ เพิ่มเมนูใหม่แล้ว");
+            }
+            
+            // เคลียร์ฟอร์ม
+            window.cancelEditMenu();
         };
 
         window.toggleMenuStatus = (id, currentStatus) => {
@@ -637,10 +691,14 @@
                     </div></div>`).join(''); 
                 
                 if(role==='admin') {
+                    // เพิ่มปุ่ม ✏️ แก้ไข ตรงนี้
                     document.getElementById('menu-list-container').innerHTML = menuData.map(m => `
                         <div class="py-3 border-bottom d-flex justify-content-between align-items-center">
                             <div><b>${m.name}</b> <br><span class="text-primary small fw-bold">฿${m.price}</span></div>
-                            <button onclick="window.toggleMenuStatus('${m.id}', '${m.status}')" class="btn btn-sm ${m.status==='soldout'?'btn-primary':'btn-light border'} rounded-pill px-3">${m.status==='soldout'?'เปิดขาย':'ตั้งหมด'}</button>
+                            <div class="d-flex gap-1">
+                                <button onclick="window.editMenu('${m.id}', '${m.name}', ${m.price}, '${m.emoji}')" class="btn btn-sm btn-outline-secondary rounded-pill px-3">✏️ แก้ไข</button>
+                                <button onclick="window.toggleMenuStatus('${m.id}', '${m.status}')" class="btn btn-sm ${m.status==='soldout'?'btn-primary':'btn-light border'} rounded-pill px-3">${m.status==='soldout'?'เปิดขาย':'ตั้งหมด'}</button>
+                            </div>
                         </div>`).join(''); 
                 }
             });
@@ -696,7 +754,6 @@
             document.getElementById('adm-btn-clear').disabled = !items.length;
             
             const sel = document.getElementById('adm-c-table'); const cur = sel.value;
-            // เพิ่มโต๊ะ 6-8 และ ซุ้ม 1, 2 กลับมาให้ครบแล้วครับ
             let opt = `<option value="โต๊ะ 1">โต๊ะ 1</option><option value="โต๊ะ 2">โต๊ะ 2</option><option value="โต๊ะ 3">โต๊ะ 3</option><option value="โต๊ะ 4">โต๊ะ 4</option><option value="โต๊ะ 5">โต๊ะ 5</option><option value="โต๊ะ 6">โต๊ะ 6</option><option value="โต๊ะ 7">โต๊ะ 7</option><option value="โต๊ะ 8">โต๊ะ 8</option><option value="ซุ้ม 1">ซุ้ม 1</option><option value="ซุ้ม 2">ซุ้ม 2</option>`;
             Object.keys(allOrders).forEach(k => { if(k.startsWith('Pre-order_') && !opt.includes(`value="${k}"`)) opt += `<option value="${k}">⭐ ${k.replace('Pre-order_','พรีออเดอร์: ')}</option>`; });
             sel.innerHTML = opt; sel.value = cur;
@@ -711,19 +768,6 @@
                 window.playKitchenVoice('ขอบคุณที่ใช้บริการร้านหนูแดง อาหารตามสั่ง โอกาสหน้าเชิญใหม่นะครับ');
                 window.showToast("✅ เคลียร์บิลเรียบร้อย");
             }
-        };
-
-        window.saveMenu = () => { 
-            const id = document.getElementById('m-edit-id').value || 'm'+Date.now(); 
-            set(ref(db,`menus/${id}`), { 
-                id, 
-                name: document.getElementById('m-name').value, 
-                price: Number(document.getElementById('m-price').value), 
-                emoji: document.getElementById('m-emoji').value || '🍽️', 
-                status: 'available' 
-            }); 
-            document.getElementById('m-name').value=''; document.getElementById('m-price').value=''; document.getElementById('m-emoji').value='';
-            window.showToast("✅ บันทึกเมนูแล้ว");
         };
 
         window.toggleStoreStatus = (s) => update(ref(db,'settings'), { store_open: s });
