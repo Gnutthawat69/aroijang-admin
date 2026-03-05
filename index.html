@@ -79,7 +79,15 @@
         .nav-pills .nav-link.active { background-color: var(--primary); color: var(--text-dark); box-shadow: 0 4px 12px rgba(216, 180, 226, 0.4); }
 
         ::-webkit-scrollbar { width: 0px; }
-        @media print { body * { visibility: hidden; } .print-area, .print-area * { visibility: visible; } .print-area { position: absolute; left: 0; top: 0; width: 100%; } }
+        
+        /* การตั้งค่าระบบ Print QR Code ให้เนียนตา */
+        @media print { 
+            body * { visibility: hidden; } 
+            #custom-qr-modal, #custom-qr-modal * { visibility: visible; } 
+            #custom-qr-modal { position: absolute; left: 0; top: 0; width: 100%; height: 100%; background: white; align-items: center; padding-top: 10%; }
+            .super-modal-box { box-shadow: none; transform: none; border: 2px solid #ddd; padding: 40px; }
+            .btn-print-hide { display: none !important; }
+        }
     </style>
 </head>
 <body>
@@ -168,8 +176,13 @@
             <div class="tab-pane fade" id="v-cashier">
                 <div class="card border-0 shadow-sm rounded-4 mb-3"><div class="card-body">
                     <label class="small text-muted fw-bold mb-2">เลือกโต๊ะหรือชื่อลูกค้า</label>
-                    <select id="adm-c-table" onchange="window.renderCashier()" class="form-select form-select-lg rounded-pill fw-bold mb-3 border-0 bg-light"></select>
-                    <button onclick="window.openSuperModal('custom-pos-modal')" class="btn btn-outline-primary w-100 rounded-pill fw-bold py-2">➕ จดออเดอร์ POS</button>
+                    <div class="d-flex gap-2 mb-3">
+                        <select id="adm-c-table" onchange="window.renderCashier()" class="form-select form-select-lg rounded-pill fw-bold border-0 bg-light"></select>
+                        <button onclick="window.generateQR()" class="btn btn-outline-primary rounded-pill px-3 fw-bold d-flex align-items-center gap-1 shadow-sm">
+                            <span class="fs-5">📱</span> QR
+                        </button>
+                    </div>
+                    <button onclick="window.openSuperModal('custom-pos-modal')" class="btn btn-primary w-100 rounded-pill fw-bold py-2 shadow-sm">➕ จดออเดอร์ POS</button>
                 </div></div>
                 <div class="card border-0 shadow-sm rounded-4 mb-3"><div class="card-body" id="adm-checkout-list" style="max-height: 40vh; overflow-y: auto;"></div></div>
                 <div class="card border-0 shadow-sm rounded-4"><div class="card-body"><div class="d-flex justify-content-between align-items-end mb-3"><span class="fw-bold">ยอดรวม</span><span id="adm-c-total" class="fs-2 fw-bold text-primary">฿0</span></div>
@@ -260,10 +273,13 @@
 
     <div id="custom-qr-modal" class="super-modal-overlay">
         <div class="super-modal-box text-center">
-            <h3 id="qr-label" class="fw-bold mb-4">โต๊ะ X</h3>
-            <div class="bg-light p-3 rounded-4 d-inline-block border mb-4"><img id="qr-img" src="" width="200" height="200"></div>
-            <button onclick="window.printQRCode()" class="btn btn-primary w-100 py-3 rounded-pill fw-bold mb-2">พิมพ์ป้าย QR</button>
-            <button class="btn btn-light w-100 py-2 rounded-pill fw-bold border" onclick="window.closeSuperModal('custom-qr-modal')">ปิด</button>
+            <h3 id="qr-label" class="fw-bold mb-3 text-primary">โต๊ะ X</h3>
+            <p class="text-muted small mb-4 btn-print-hide">สแกนเพื่อสั่งอาหารที่โต๊ะนี้</p>
+            <div class="bg-light p-3 rounded-4 d-inline-block border mb-4 shadow-sm"><img id="qr-img" src="" width="220" height="220"></div>
+            <div class="d-flex flex-column gap-2 btn-print-hide">
+                <button onclick="window.printQRCode()" class="btn btn-primary w-100 py-3 rounded-pill fw-bold shadow-sm">🖨️ พิมพ์ป้าย QR Code</button>
+                <button class="btn btn-light w-100 py-2 rounded-pill fw-bold border" onclick="window.closeSuperModal('custom-qr-modal')">ปิด</button>
+            </div>
         </div>
     </div>
 
@@ -327,7 +343,35 @@
             new bootstrap.Toast(document.getElementById('liveToast')).show(); 
         };
 
-        // ฟังก์ชันที่ถูกเรียกผ่าน HTML (การทำงานฐานข้อมูล)
+        // ฟังก์ชันสร้าง QR Code
+        window.generateQR = () => {
+            const t = document.getElementById('adm-c-table').value;
+            if (t.startsWith('Pre-order_')) {
+                window.showToast("❌ พรีออเดอร์ไม่มี QR Code ให้สแกนครับ");
+                return;
+            }
+            
+            // สร้าง Token แบบสุ่มเพื่อความปลอดภัย
+            const sessionToken = Date.now().toString(36);
+            set(ref(db, `table_sessions/${t}`), sessionToken);
+            
+            // สร้าง URL ลิงก์ร้านของคุณ (ดึงจาก URL ปัจจุบันที่ใช้งานอยู่)
+            const baseUrl = window.location.href.split('?')[0]; 
+            const orderUrl = `${baseUrl}?table=${encodeURIComponent(t)}&token=${sessionToken}`;
+            
+            // ใส่ข้อมูลลงหน้าต่าง Modal
+            document.getElementById('qr-label').innerText = t;
+            // ใช้ API สร้างรูป QR Code ฟรี
+            document.getElementById('qr-img').src = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(orderUrl)}&margin=10`;
+            
+            window.openSuperModal('custom-qr-modal');
+        };
+
+        window.printQRCode = () => {
+            window.print();
+        };
+
+        // ฟังก์ชันฐานข้อมูลอื่นๆ
         window.approveUser = (uid) => {
             update(ref(db, `users/${uid}`), { role: 'staff' });
             window.showToast("✅ อนุมัติสิทธิ์พนักงานเรียบร้อย");
@@ -383,7 +427,7 @@
                 if (tableNo && token) {
                     const sessionRef = await get(ref(db, `table_sessions/${tableNo}`));
                     if (sessionRef.val() === token) { startCustomerMode(); } 
-                    else { throw new Error("QR โต๊ะหมดอายุครับ"); }
+                    else { throw new Error("QR โต๊ะหมดอายุครับ แอดมินต้องสร้างให้ใหม่"); }
                 } else {
                     document.getElementById('auth-msg').innerText = "เชื่อมต่อ LINE..."; 
                     await liff.init({ liffId: LIFF_ID });
@@ -652,7 +696,8 @@
             document.getElementById('adm-btn-clear').disabled = !items.length;
             
             const sel = document.getElementById('adm-c-table'); const cur = sel.value;
-            let opt = `<option value="โต๊ะ 1">โต๊ะ 1</option><option value="โต๊ะ 2">โต๊ะ 2</option><option value="โต๊ะ 3">โต๊ะ 3</option><option value="โต๊ะ 4">โต๊ะ 4</option><option value="โต๊ะ 5">โต๊ะ 5</option>`;
+            // เพิ่มโต๊ะ 6-8 และ ซุ้ม 1, 2 กลับมาให้ครบแล้วครับ
+            let opt = `<option value="โต๊ะ 1">โต๊ะ 1</option><option value="โต๊ะ 2">โต๊ะ 2</option><option value="โต๊ะ 3">โต๊ะ 3</option><option value="โต๊ะ 4">โต๊ะ 4</option><option value="โต๊ะ 5">โต๊ะ 5</option><option value="โต๊ะ 6">โต๊ะ 6</option><option value="โต๊ะ 7">โต๊ะ 7</option><option value="โต๊ะ 8">โต๊ะ 8</option><option value="ซุ้ม 1">ซุ้ม 1</option><option value="ซุ้ม 2">ซุ้ม 2</option>`;
             Object.keys(allOrders).forEach(k => { if(k.startsWith('Pre-order_') && !opt.includes(`value="${k}"`)) opt += `<option value="${k}">⭐ ${k.replace('Pre-order_','พรีออเดอร์: ')}</option>`; });
             sel.innerHTML = opt; sel.value = cur;
         };
