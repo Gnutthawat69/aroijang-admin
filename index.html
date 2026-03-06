@@ -6,8 +6,13 @@
     <title>หนูแดง อาหารตามสั่ง - Smart POS</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
+    
     <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+    
     <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
     
     <script>
         tailwind.config = {
@@ -19,7 +24,10 @@
                             secondary: '#fed7aa', 
                             bg: '#fff7ed', 
                             dark: '#1f2937', 
-                            accent: '#22c55e' 
+                            accent: '#22c55e',
+                            pink: '#fdf2f8',
+                            purple: '#fdf4ff',
+                            yellow: '#fefce8'
                         }
                     },
                     fontFamily: { kanit: ['Kanit', 'sans-serif'] }
@@ -30,9 +38,8 @@
     
     <style>
         * { font-family: 'Kanit', sans-serif; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-        body { background-color: #f3f4f6; margin: 0; }
+        body { background-color: #f3f4f6; margin: 0; min-height: 100vh; overflow-x: hidden; }
         
-        /* UI Classes จากระบบใหม่ */
         .glass { background: rgba(255,255,255,0.95); backdrop-filter: blur(10px); }
         .gradient-bg { background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 50%, #f0932b 100%); }
         .card-shadow { box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
@@ -43,20 +50,21 @@
         }
         
         .menu-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
-        .menu-card { transition: transform 0.1s; position: relative; z-index: 10; }
+        .menu-card { transition: transform 0.1s; position: relative; z-index: 10; border: 1px solid white; background: rgba(255, 255, 255, 0.95); border-radius: 1.5rem; box-shadow: 0 4px 15px rgba(219, 39, 119, 0.08); cursor: pointer; }
         .menu-card:active { transform: scale(0.95); }
         
         .status-badge { font-size: 0.75rem; padding: 4px 10px; border-radius: 9999px; font-weight: 600; }
         .tab-btn { transition: all 0.2s; white-space: nowrap; }
-        .tab-btn.active { background: white; color: #ea580c; box-shadow: 0 2px 8px rgba(0,0,0,0.1); font-weight: bold; }
+        .tab-btn.active { background: white; color: #ea580c; box-shadow: 0 2px 8px rgba(0,0,0,0.1); font-weight: bold; border-color: transparent; }
         
         .hide-scrollbar::-webkit-scrollbar { display: none; }
         .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         
-        /* Utils สำหรับระบบเรา */
+        /* แก้อาการทับซ้อน ซ่อนหน้าจอ 100% */
         .hidden-view { display: none !important; }
+        
         .sold-out { opacity: 0.5; filter: grayscale(100%); pointer-events: none; }
-        .sold-out::after { content: "วัตถุดิบหมด"; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-10deg); background: #ef4444; color: white; padding: 0.25rem 1rem; border-radius: 1rem; font-weight: bold; font-size: 0.8rem; z-index: 20; width: max-content; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .sold-out::after { content: "วัตถุดิบหมด"; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-10deg); background: #be123c; color: white; padding: 0.25rem 1rem; border-radius: 1rem; font-weight: bold; font-size: 0.8rem; z-index: 20; width: max-content; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
         
         /* Modals */
         .modal-bg { position: fixed; inset: 0; background: rgba(31, 41, 55, 0.6); backdrop-filter: blur(4px); z-index: 99999; display: flex; align-items: flex-end; justify-content: center; opacity: 0; visibility: hidden; transition: all 0.3s; }
@@ -65,11 +73,10 @@
         .modal-bg.show .modal-content { transform: translateY(0); }
         
         .toast { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background: #1f2937; color: white; padding: 12px 24px; border-radius: 20px; z-index: 100000; font-weight: 500; font-size: 14px; display: none; box-shadow: 0 10px 25px rgba(0,0,0,0.2); width: max-content; max-width: 90%; text-align: center;}
-        
         .loader { border: 4px solid rgba(255,255,255,0.3); border-top: 4px solid #fff; border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite; margin: 0 auto; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
-        /* 🖨️ ระบบ Print CSS 🖨️ */
+        /* 🖨️ ระบบพิมพ์ใบเสร็จ 🖨️ */
         #receipt-print { display: none; }
         @media print {
             body * { visibility: hidden !important; }
@@ -79,18 +86,16 @@
         }
     </style>
 </head>
-<body class="h-full bg-gray-100">
+<body>
 
-    <div id="toast-msg" class="toast no-print">ระบบแจ้งเตือน</div>
-
+    <div id="toast-msg" class="toast no-print">ข้อความแจ้งเตือน</div>
     <div id="receipt-print"></div>
 
     <div id="view-loader" class="flex flex-col items-center justify-center min-h-screen gradient-bg p-6 relative no-print">
         <div id="loader-spinner" class="loader"></div>
         <p class="mt-4 font-bold text-white animate-pulse text-lg" id="loader-text">กำลังตรวจสอบระบบ...</p>
         
-        <div id="system-msg" class="hidden-view mt-6 bg-white p-6 rounded-3xl card-shadow text-center max-w-sm w-full">
-            </div>
+        <div id="system-msg" class="hidden-view mt-6 bg-white p-6 rounded-3xl card-shadow text-center max-w-sm w-full"></div>
     </div>
 
     <div id="view-customer" class="hidden-view flex-col pb-32 min-h-screen bg-theme-bg no-print">
@@ -245,15 +250,19 @@
         </div>
     </div>
 
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
-        import { getDatabase, ref, onValue, set, update, remove, get, onChildAdded } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-database.js";
-
-        const firebaseConfig = { apiKey: "AIzaSyAppTwYAQcvviSk_H8hwsRRHSB9Y0b5O6k", authDomain: "canva-ai-database-ledger-86b6c.firebaseapp.com", databaseURL: "https://canva-ai-database-ledger-86b6c-default-rtdb.asia-southeast1.firebasedatabase.app", projectId: "canva-ai-database-ledger-86b6c" };
-        const app = initializeApp(firebaseConfig); const db = getDatabase(app);
+    <script>
+        // 1. ตั้งค่า Firebase (ใช้รูปแบบ Compat คลาสสิก)
+        const firebaseConfig = { 
+            apiKey: "AIzaSyAppTwYAQcvviSk_H8hwsRRHSB9Y0b5O6k", 
+            authDomain: "canva-ai-database-ledger-86b6c.firebaseapp.com", 
+            databaseURL: "https://canva-ai-database-ledger-86b6c-default-rtdb.asia-southeast1.firebasedatabase.app", 
+            projectId: "canva-ai-database-ledger-86b6c" 
+        };
+        firebase.initializeApp(firebaseConfig); 
+        const db = firebase.database();
         const LIFF_ID = "2009300498-iyTZochS";
 
-        // เพิ่ม Categories ให้กับเมนู 50 รายการ
+        // หมวดหมู่และเมนู
         const catList = ['ทั้งหมด', 'อาหารจานเดียว', 'กับข้าว', 'เมนูเส้น', 'ยำ/ต้มยำ'];
         const menus = [
             { id: "m1", name: "กะเพราหมูกรอบ", price: 60, main: "หมูกรอบ", emoji: "🥓", cat: "อาหารจานเดียว" }, { id: "m2", name: "กะเพราหมูสับ", price: 50, main: "หมูสับ", emoji: "🍛", cat: "อาหารจานเดียว" },
@@ -308,23 +317,27 @@
             msgBox.classList.remove('hidden-view');
         }
 
+        // ==========================================
+        // 1. Initial Load
+        // ==========================================
         window.onload = async () => {
             const urlParams = new URLSearchParams(window.location.search);
             const pTable = urlParams.get('table'); const pToken = urlParams.get('token');
 
             if (pTable && pToken) {
-                try {
-                    const snap = await get(ref(db, `table_sessions/${pTable}`));
+                db.ref(`table_sessions/${pTable}`).once('value').then(snap => {
                     if(snap.exists() && snap.val() === pToken) {
                         tableNo = pTable; currentMode = "customer"; initCustomerMode();
                     } else { showSystemMsg('🚫', 'สแกนไม่ได้', 'QR Code หมดอายุ หรือไม่ได้สแกนผ่านป้ายของร้าน'); }
-                } catch(e) {}
+                }).catch(e => console.error(e));
             } else {
                 try {
                     await liff.init({ liffId: LIFF_ID });
                     if (liff.isLoggedIn()) { checkStaffRoleAndEnter(); } 
-                    else { liff.login(); } // บังคับล็อกอินทันที ไม่โชว์หน้ากฎ
-                } catch(e) { showSystemMsg('⚠️', 'เชื่อมต่อ LINE ล้มเหลว', 'กรุณาเปิดลิงก์ผ่านแอปพลิเคชัน LINE ครับ', `<button onclick="window.switchView('view-auth')" class="bg-theme-primary text-white w-full py-3 rounded-xl font-bold">เข้าสู่ระบบด้วยวิธีอื่น</button>`); }
+                    else { liff.login(); } // บังคับล็อกอินทันที!
+                } catch(e) { 
+                    showSystemMsg('⚠️', 'เชื่อมต่อ LINE ล้มเหลว', 'กรุณาเปิดลิงก์ผ่านแอปพลิเคชัน LINE ครับ', `<button onclick="window.switchView('view-auth')" class="bg-theme-primary text-white w-full py-3 rounded-xl font-bold">เข้าสู่ระบบด้วยวิธีอื่น</button>`); 
+                }
             }
         };
 
@@ -332,14 +345,15 @@
 
         async function checkStaffRoleAndEnter() {
             try {
-                const profile = await liff.getProfile(); const snap = await get(ref(db, `users/${profile.userId}`));
+                const profile = await liff.getProfile(); 
+                const snap = await db.ref(`users/${profile.userId}`).once('value');
                 if (snap.exists() && (snap.val().role === 'admin' || snap.val().role === 'staff')) {
                     currentMode = "staff"; window.showToast(`สวัสดี ${profile.displayName}`); initStaffMode();
                 } else if (!snap.exists()) {
-                    await set(ref(db, `users/${profile.userId}`), { name: profile.displayName, role: 'pending' });
+                    await db.ref(`users/${profile.userId}`).set({ name: profile.displayName, role: 'pending' });
                     showSystemMsg('⏳', 'รออนุมัติสิทธิ์', 'ระบบบันทึกข้อมูลแล้ว กรุณารอแอดมินอนุมัติสิทธิ์ครับ');
                 } else { showSystemMsg('⏳', 'รออนุมัติสิทธิ์', 'บัญชีของคุณอยู่ระหว่างรออนุมัติสิทธิ์เข้าใช้งานหลังบ้าน'); }
-            } catch(e) {}
+            } catch(e) { console.error(e); }
         }
 
         window.staffLogout = () => { if(liff.isLoggedIn()) liff.logout(); location.reload(); };
@@ -377,35 +391,38 @@
             buildMenuGrid('cust-menu-grid'); buildMenuGrid('staff-menu-grid');
         };
 
+        // ==========================================
+        // 2. Data Loading
+        // ==========================================
         function initCustomerMode() {
             window.switchView('view-customer'); document.getElementById('cust-table-label').innerText = tableNo;
             renderCategories('cust-categories');
-            onValue(ref(db, 'stock'), snap => {
+            db.ref('stock').on('value', snap => {
                 if(!snap.exists()) {
                     const initStock = {"หมูกรอบ":20,"หมูสับ":50,"หมูชิ้น":50,"ตับ":20,"ปลาหมึก":20,"ลูกชิ้น":30,"ปลาดุกทอด":15,"เส้นใหญ่":30,"บะหมี่เหลือง":30};
-                    set(ref(db, 'stock'), initStock); dbStock = initStock;
+                    db.ref('stock').set(initStock); dbStock = initStock;
                 } else { dbStock = snap.val(); }
                 buildMenuGrid('cust-menu-grid');
             });
-            onValue(ref(db, `carts/${tableNo}`), snap => { cartCustomer = snap.val() || {}; updateCartDisplay(); });
-            onValue(ref(db, `orders/${tableNo}`), snap => { buildOrdersList(snap.val() || {}); });
+            db.ref(`carts/${tableNo}`).on('value', snap => { cartCustomer = snap.val() || {}; updateCartDisplay(); });
+            db.ref(`orders/${tableNo}`).on('value', snap => { buildOrdersList(snap.val() || {}); });
         }
 
         function initStaffMode() {
             window.switchView('view-staff'); renderCategories('staff-categories');
-            onValue(ref(db, 'stock'), snap => { dbStock = snap.val() || {}; buildMenuGrid('staff-menu-grid'); });
-            onValue(ref(db, 'orders'), snap => {
+            db.ref('stock').on('value', snap => { dbStock = snap.val() || {}; buildMenuGrid('staff-menu-grid'); });
+            db.ref('orders').on('value', snap => {
                 const all = snap.val() || {}; let q = [];
                 Object.keys(all).forEach(t => { Object.keys(all[t]).forEach(id => { if(all[t][id].status !== 'done') q.push({t, id, ...all[t][id]}); }); });
                 q.sort((a,b) => a.timestamp - b.timestamp); buildKDS(q);
             });
-            onChildAdded(ref(db, 'orders'), snap => {
+            db.ref('orders').on('child_added', snap => {
                 const tName = snap.key; const items = snap.val();
                 Object.entries(items).forEach(([id, item]) => {
                     if(item.status === 'pending' && !item.announced) {
                         let t = item.type === 'preorder' ? 'พรีออเดอร์' : item.type === 'takeaway' ? 'กลับบ้าน' : 'ทานร้าน';
                         playVoice(`คิวใหม่ ${t} โต๊ะ ${tName} เมนู ${item.name}`);
-                        update(ref(db, `orders/${tName}/${id}`), { announced: true });
+                        db.ref(`orders/${tName}/${id}`).update({ announced: true });
                     }
                 });
             });
@@ -427,6 +444,9 @@
             container.innerHTML = html;
         }
 
+        // ==========================================
+        // 3. Cart & Order Functions
+        // ==========================================
         window.showAddModal = (id) => {
             selectedMenu = menus.find(x => x.id === id);
             document.getElementById('m-add-name').innerText = selectedMenu.name; document.getElementById('m-add-price').innerText = `฿${selectedMenu.price}`; document.getElementById('m-add-note').value = "";
@@ -446,7 +466,7 @@
             const item = { id: selectedMenu.id, name: selectedMenu.name, price: selectedMenu.price + addPrice, main: selectedMenu.main, topping: tNames.join(", "), note, stockDeductions: deductions, qty: 1 };
             
             if(currentMode === "staff") { cartStaff[`c_${Date.now()}`] = item; window.showToast("✅ เพิ่มลงตะกร้าพนักงาน"); updateCartDisplay(); } 
-            else { set(ref(db, `carts/${tableNo}/c_${Date.now()}`), item); window.showToast("✅ เพิ่มลงตะกร้าสำเร็จ"); }
+            else { db.ref(`carts/${tableNo}/c_${Date.now()}`).set(item); window.showToast("✅ เพิ่มลงตะกร้าสำเร็จ"); }
             window.closeModal('modal-add');
         };
 
@@ -472,7 +492,7 @@
 
         window.adjQty = (k, d, isStaff) => {
             if(isStaff) { const n = cartStaff[k].qty + d; if(n<=0) delete cartStaff[k]; else cartStaff[k].qty = n; updateCartDisplay(); } 
-            else { const n = cartCustomer[k].qty + d; if(n<=0) remove(ref(db, `carts/${tableNo}/${k}`)); else update(ref(db, `carts/${tableNo}/${k}`), {qty:n}); }
+            else { const n = cartCustomer[k].qty + d; if(n<=0) db.ref(`carts/${tableNo}/${k}`).remove(); else db.ref(`carts/${tableNo}/${k}`).update({qty:n}); }
         };
 
         window.submitCart = () => {
@@ -490,10 +510,10 @@
 
             const payload = {}; items.forEach((i, idx) => { payload[`o_${Date.now()}_${idx}`] = {...i, status:'pending', timestamp:Date.now(), type:type, pickupTime:pTime}; });
 
-            update(ref(db, `orders/${target}`), payload).then(() => {
-                update(ref(db, 'stock'), copyStock); window.closeModal('modal-cart');
+            db.ref(`orders/${target}`).update(payload).then(() => {
+                db.ref('stock').update(copyStock); window.closeModal('modal-cart');
                 if(isStaff) { cartStaff = {}; document.getElementById('pos-table-name').value = ""; document.getElementById('pos-time').value = ""; updateCartDisplay(); window.showToast("✅ บันทึกออเดอร์ลงครัว"); } 
-                else { remove(ref(db, `carts/${tableNo}`)); window.showToast("✅ ส่งออเดอร์เข้าครัวเรียบร้อย!"); }
+                else { db.ref(`carts/${tableNo}`).remove(); window.showToast("✅ ส่งออเดอร์เข้าครัวเรียบร้อย!"); }
             });
         };
 
@@ -510,9 +530,12 @@
         window.cancelMyOrder = (id, strDed, qty) => {
             if(confirm("ยืนยันการยกเลิกเมนูนี้?")) {
                 const d = JSON.parse(decodeURIComponent(strDed)); let ret = {};
-                get(ref(db,'stock')).then(snap => {
+                db.ref('stock').once('value').then(snap => {
                     const c = snap.val()||{}; Object.entries(d).forEach(([n,a]) => { if(c[n]!==undefined) ret[n] = c[n]+(a*qty); });
-                    remove(ref(db, `orders/${tableNo}/${id}`)).then(() => { if(Object.keys(ret).length>0) update(ref(db,'stock'),ret); window.showToast("✅ ยกเลิกสำเร็จ"); });
+                    db.ref(`orders/${tableNo}/${id}`).remove().then(() => { 
+                        if(Object.keys(ret).length>0) db.ref('stock').update(ret); 
+                        window.showToast("✅ ยกเลิกสำเร็จ"); 
+                    });
                 });
             }
         };
@@ -527,7 +550,7 @@
         }
 
         window.kdsAction = (t, id, stat, name) => {
-            update(ref(db, `orders/${t}/${id}`), {status:stat}).then(() => {
+            db.ref(`orders/${t}/${id}`).update({status:stat}).then(() => {
                 if(stat === 'preparing') playVoice(`รับออเดอร์ กำลังทำเมนู ${name}`);
                 if(stat === 'done') playVoice(`เมนู ${name} โต๊ะ ${t} เสร็จเรียบร้อยครับ`);
             });
@@ -544,9 +567,12 @@
             let u = new SpeechSynthesisUtterance(cleanText); u.lang = 'th-TH'; u.rate = 1.0; window.speechSynthesis.speak(u);
         }
 
+        // ==========================================
+        // 4. Admin & เครื่องพิมพ์ (Receipt Print)
+        // ==========================================
         window.generateQR = () => {
             const t = document.getElementById('qr-table-sel').value; const token = Math.random().toString(36).substring(2,10);
-            set(ref(db, `table_sessions/${t}`), token).then(() => {
+            db.ref(`table_sessions/${t}`).set(token).then(() => {
                 const url = `${window.location.href.split('?')[0]}?table=${encodeURIComponent(t)}&token=${token}`;
                 document.getElementById('qr-result-box').classList.remove('hidden-view');
                 document.getElementById('qr-img-src').src = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(url)}`;
@@ -557,15 +583,14 @@
         window.clearTable = () => {
             const t = document.getElementById('clear-table-sel').value;
             if(confirm(`ยืนยันการเคลียร์โต๊ะ ${t} ?\n(QR Code เดิมจะสั่งอาหารไม่ได้อีก)`)) {
-                remove(ref(db, `orders/${t}`)); remove(ref(db, `carts/${t}`)); remove(ref(db, `table_sessions/${t}`));
+                db.ref(`orders/${t}`).remove(); db.ref(`carts/${t}`).remove(); db.ref(`table_sessions/${t}`).remove();
                 window.showToast(`✅ ปิดโต๊ะ ${t} เรียบร้อยแล้ว`);
             }
         };
 
-        // 🖨️ ฟังก์ชันพิมพ์ใบเสร็จ (Receipt Printer)
         window.printReceipt = async () => {
             const t = document.getElementById('clear-table-sel').value;
-            const snap = await get(ref(db, `orders/${t}`));
+            const snap = await db.ref(`orders/${t}`).once('value');
             const orders = snap.val();
             
             if(!orders) return window.showToast(`❌ ไม่พบข้อมูลการสั่งอาหารของ ${t}`);
