@@ -1,334 +1,36 @@
+
 <!DOCTYPE html>
 <html>
 <head>
-
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-
 <title>หนูแดง POS</title>
-
 <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
-
-<style>
-
-body{
-margin:0;
-font-family:sans-serif;
-background:#f4f4f4;
-}
-
-/* splash */
-
-#splash{
-display:flex;
-flex-direction:column;
-justify-content:center;
-align-items:center;
-height:100vh;
-text-align:center;
-}
-
-.logo{
-width:120px;
-border-radius:20px;
-margin-bottom:20px;
-}
-
-.login{
-padding:14px 30px;
-background:#2c3e50;
-color:white;
-border:none;
-border-radius:10px;
-font-size:16px;
-}
-
-/* header */
-
-header{
-background:#2c3e50;
-color:white;
-display:flex;
-justify-content:space-between;
-align-items:center;
-padding:10px 15px;
-}
-
-.staff{
-display:flex;
-align-items:center;
-gap:10px;
-}
-
-.staff img{
-width:36px;
-border-radius:50%;
-}
-
-/* tables */
-
-#tables{
-display:grid;
-grid-template-columns:repeat(4,1fr);
-gap:12px;
-padding:15px;
-}
-
-.table{
-background:white;
-padding:20px;
-border-radius:12px;
-text-align:center;
-font-weight:bold;
-box-shadow:0 3px 6px rgba(0,0,0,0.15);
-}
-
-/* menu */
-
-#menu{
-padding:10px;
-}
-
-.menuItem{
-background:white;
-margin:8px 0;
-padding:12px;
-border-radius:10px;
-display:flex;
-justify-content:space-between;
-}
-
-/* order */
-
-#orderPanel{
-position:fixed;
-bottom:0;
-left:0;
-right:0;
-background:white;
-padding:15px;
-border-top:1px solid #ddd;
-}
-
-.total{
-font-size:20px;
-margin-top:5px;
-}
-
-.checkout{
-margin-top:10px;
-width:100%;
-padding:14px;
-background:#27ae60;
-border:none;
-color:white;
-border-radius:10px;
-font-size:16px;
-}
-
-</style>
-
+<link rel="stylesheet" href="css/style.css">
 </head>
-
 <body>
 
-<!-- splash -->
-
-<div id="splash">
-
+<div class="splash">
 <img class="logo"
 src="https://ch.line-scdn.net/0hR3IJRnpEDRx0MxLd-rtySyZuBn5HURMXVgcZexhjGFsdUEkXFAc3GlBhJlwfeBYQQCky/f256x256">
-
 <h2>หนูแดง อาหารตามสั่ง</h2>
-
-<p>Restaurant Smart POS v1.5</p>
-
-<button class="login" onclick="login()">เข้าสู่ระบบ LINE</button>
-
-</div>
-
-<!-- POS -->
-
-<div id="pos" style="display:none">
-
-<header>
-
-<h3>POS</h3>
-
-<div class="staff">
-
-<img id="avatar">
-<span id="name"></span>
-
-</div>
-
-</header>
-
-<h3 style="padding-left:10px">เลือกโต๊ะ</h3>
-
-<div id="tables"></div>
-
-<h3 style="padding-left:10px">เมนู</h3>
-
-<div id="menu"></div>
-
-<div id="orderPanel">
-
-<h3>รายการ</h3>
-
-<ul id="orders"></ul>
-
-<div class="total">
-รวม: <span id="total">0</span> บาท
-</div>
-
-<button class="checkout" onclick="checkout()">Checkout</button>
-
-</div>
-
+<p>Restaurant Smart POS</p>
+<button onclick="login()">เข้าสู่ระบบ LINE</button>
 </div>
 
 <script>
-
 const LIFF_ID="2009300498-iyTZochS"
 
-let table=null
-let orders=[]
-
-const menu=[
-
-{name:"ข้าวผัดหมู",price:50},
-{name:"ข้าวผัดทะเล",price:60},
-{name:"ข้าวผัดรวมมิตร",price:70},
-{name:"ผัดกะเพราหมู",price:50},
-{name:"ผัดกะเพราไก่",price:50},
-{name:"ไข่ดาว",price:10}
-
-]
-
 async function login(){
-
 await liff.init({liffId:LIFF_ID})
 
 if(!liff.isLoggedIn()){
-
-liff.login({redirectUri:window.location.href})
-
+liff.login({redirectUri:window.location.origin+"/pos.html"})
 return
-
 }
 
-const profile=await liff.getProfile()
-
-document.getElementById("name").innerText=profile.displayName
-document.getElementById("avatar").src=profile.pictureUrl
-
-document.getElementById("splash").style.display="none"
-document.getElementById("pos").style.display="block"
-
-createTables()
-renderMenu()
-
+window.location.href="pos.html"
 }
-
-function createTables(){
-
-const area=document.getElementById("tables")
-
-for(let i=1;i<=8;i++){
-
-let div=document.createElement("div")
-
-div.className="table"
-div.innerText="โต๊ะ "+i
-
-div.onclick=()=>{
-
-table=i
-alert("เลือกโต๊ะ "+i)
-
-}
-
-area.appendChild(div)
-
-}
-
-}
-
-function renderMenu(){
-
-const area=document.getElementById("menu")
-
-menu.forEach(m=>{
-
-let div=document.createElement("div")
-
-div.className="menuItem"
-
-div.innerHTML=`
-<span>${m.name}</span>
-<span>${m.price}฿</span>
-`
-
-div.onclick=()=>addOrder(m)
-
-area.appendChild(div)
-
-})
-
-}
-
-function addOrder(m){
-
-orders.push(m)
-
-renderOrders()
-
-}
-
-function renderOrders(){
-
-const list=document.getElementById("orders")
-
-list.innerHTML=""
-
-let total=0
-
-orders.forEach(o=>{
-
-let li=document.createElement("li")
-
-li.innerText=o.name+" "+o.price+"฿"
-
-list.appendChild(li)
-
-total+=o.price
-
-})
-
-document.getElementById("total").innerText=total
-
-}
-
-function checkout(){
-
-if(!table){
-
-alert("เลือกโต๊ะก่อน")
-
-return
-
-}
-
-let bill="B"+Date.now()
-
-alert("ชำระเงินสำเร็จ\nเลขบิล "+bill)
-
-orders=[]
-renderOrders()
-
-}
-
 </script>
 
 </body>
