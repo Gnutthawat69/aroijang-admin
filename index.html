@@ -5,7 +5,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 
-<title>Restaurant Smart POS</title>
+<title>หนูแดง POS</title>
 
 <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 
@@ -132,7 +132,7 @@ font-size:16px;
 
 <body>
 
-<!-- Splash -->
+<!-- splash -->
 
 <div id="splash">
 
@@ -141,9 +141,9 @@ src="https://ch.line-scdn.net/0hR3IJRnpEDRx0MxLd-rtySyZuBn5HURMXVgcZexhjGFsdUEkX
 
 <h2>หนูแดง อาหารตามสั่ง</h2>
 
-<p>Restaurant Smart POS V1.0</p>
+<p>Restaurant Smart POS v1.5</p>
 
-<button class="login" onclick="login()">เข้าสู่ระบบด้วย LINE</button>
+<button class="login" onclick="login()">เข้าสู่ระบบ LINE</button>
 
 </div>
 
@@ -153,12 +153,11 @@ src="https://ch.line-scdn.net/0hR3IJRnpEDRx0MxLd-rtySyZuBn5HURMXVgcZexhjGFsdUEkX
 
 <header>
 
-<h3>Restaurant POS</h3>
+<h3>POS</h3>
 
 <div class="staff">
 
 <img id="avatar">
-
 <span id="name"></span>
 
 </div>
@@ -191,7 +190,7 @@ src="https://ch.line-scdn.net/0hR3IJRnpEDRx0MxLd-rtySyZuBn5HURMXVgcZexhjGFsdUEkX
 
 <script>
 
-const LIFF_ID = "2009300498-iyTZochS"
+const LIFF_ID="2009300498-iyTZochS"
 
 let table=null
 let orders=[]
@@ -202,7 +201,8 @@ const menu=[
 {name:"ข้าวผัดทะเล",price:60},
 {name:"ข้าวผัดรวมมิตร",price:70},
 {name:"ผัดกะเพราหมู",price:50},
-{name:"ผัดกะเพราไก่",price:50}
+{name:"ผัดกะเพราไก่",price:50},
+{name:"ไข่ดาว",price:10}
 
 ]
 
@@ -211,8 +211,11 @@ async function login(){
 await liff.init({liffId:LIFF_ID})
 
 if(!liff.isLoggedIn()){
-liff.login()
+
+liff.login({redirectUri:window.location.href})
+
 return
+
 }
 
 const profile=await liff.getProfile()
@@ -237,7 +240,6 @@ for(let i=1;i<=8;i++){
 let div=document.createElement("div")
 
 div.className="table"
-
 div.innerText="โต๊ะ "+i
 
 div.onclick=()=>{
@@ -320,10 +322,9 @@ return
 
 let bill="B"+Date.now()
 
-alert("ชำระเงินแล้ว\nเลขบิล "+bill)
+alert("ชำระเงินสำเร็จ\nเลขบิล "+bill)
 
 orders=[]
-
 renderOrders()
 
 }
