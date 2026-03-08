@@ -1,37 +1,268 @@
-
 <!DOCTYPE html>
-<html>
+<html lang="th">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>หนูแดง POS</title>
-<script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
-<link rel="stylesheet" href="css/style.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>หนูแดง Smart POS</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        * { font-family: 'Kanit', sans-serif; -webkit-tap-highlight-color: transparent; }
+        body { background-color: #f5f5f5; margin: 0; padding: 0; overflow-x: hidden; }
+        
+        /* ระบบสลับหน้าจอ (SPA) */
+        .app-view { display: none; min-height: 100vh; flex-direction: column; }
+        .app-view.active { display: flex; }
+        
+        /* ซ่อน Scrollbar */
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
 </head>
 <body>
 
-<div class="splash">
-<img class="logo"
-src="https://ch.line-scdn.net/0hR3IJRnpEDRx0MxLd-rtySyZuBn5HURMXVgcZexhjGFsdUEkXFAc3GlBhJlwfeBYQQCky/f256x256">
-<h2>หนูแดง อาหารตามสั่ง</h2>
-<p>Restaurant Smart POS</p>
-<button onclick="login()">เข้าสู่ระบบ LINE</button>
-</div>
+    <div id="view-splash" class="app-view active items-center justify-center bg-slate-50">
+        <div class="text-center w-full max-w-sm p-6">
+            <img src="https://ch.line-scdn.net/0hR3IJRnpEDRx0MxLd-rtySyZuBn5HURMXVgcZexhjGFsdUEkXFAc3GlBhJlwfeBYQQCky/f256x256" 
+                 alt="หนูแดง โลโก้" 
+                 class="w-32 h-32 mx-auto rounded-3xl shadow-lg mb-6 border-4 border-white">
+                 
+            <h2 class="text-3xl font-bold text-slate-800 mb-1">หนูแดง อาหารตามสั่ง</h2>
+            <p class="text-slate-500 mb-10 font-medium">Restaurant Smart POS</p>
+            
+            <button onclick="login()" class="w-full py-4 bg-[#06C755] text-white rounded-xl font-bold text-lg shadow-md active:scale-95 transition-transform flex items-center justify-center gap-2">
+                เข้าสู่ระบบ LINE
+            </button>
+        </div>
+    </div>
 
-<script>
-const LIFF_ID="2009300498-iyTZochS"
+    <div id="view-pos" class="app-view pb-48">
+        <header class="bg-[#2c3e50] text-white p-4 flex justify-between items-center shadow-md sticky top-0 z-20">
+            <h2 class="text-lg font-bold">Restaurant POS</h2>
+            <div class="flex items-center gap-3 bg-white/10 px-3 py-1.5 rounded-full">
+                <img id="avatar" src="" class="w-8 h-8 rounded-full border-2 border-white object-cover" onerror="this.src='https://via.placeholder.com/150'">
+                <span id="name" class="font-medium text-sm text-white">กำลังโหลด...</span>
+            </div>
+        </header>
 
-async function login(){
-await liff.init({liffId:LIFF_ID})
+        <div class="p-4">
+            <h3 class="font-bold text-slate-700 text-lg mb-3 flex items-center gap-2"><span>🪑</span> เลือกโต๊ะ</h3>
+            <div id="tables" class="grid grid-cols-4 gap-3 mb-6">
+                </div>
 
-if(!liff.isLoggedIn()){
-liff.login({redirectUri:window.location.origin+"/pos.html"})
-return
-}
+            <h3 class="font-bold text-slate-700 text-lg mb-3 flex items-center gap-2"><span>🍽️</span> เมนูอาหาร</h3>
+            <div id="menu" class="space-y-3">
+                </div>
+        </div>
 
-window.location.href="pos.html"
-}
-</script>
+        <div class="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 shadow-[0_-5px_15px_rgba(0,0,0,0.05)] z-30 flex flex-col max-h-[40vh]">
+            <div class="flex-1 overflow-y-auto p-4 hide-scrollbar">
+                <ul id="orders" class="space-y-2 mb-2">
+                    <li class="text-center text-slate-400 text-sm py-4">ยังไม่มีรายการสั่งอาหาร</li>
+                </ul>
+            </div>
+            
+            <div class="bg-slate-50 p-4 border-t border-slate-200">
+                <div class="flex justify-between items-end mb-4">
+                    <span class="font-bold text-slate-600">รวมทั้งสิ้น</span>
+                    <div class="text-2xl font-black text-[#ea580c]">
+                        <span id="total">0</span> <span class="text-lg">บาท</span>
+                    </div>
+                </div>
+                <button onclick="checkout()" class="w-full py-4 bg-[#2c3e50] text-white rounded-xl font-bold text-lg active:scale-95 transition-transform shadow-md">
+                    Checkout (ชำระเงิน)
+                </button>
+            </div>
+        </div>
+    </div>
 
+    <script>
+        const LIFF_ID = "2009300498-iyTZochS";
+
+        // ข้อมูลจากไฟล์ menu.js ของคุณ
+        const menu = [
+            {name: "ข้าวผัดหมู", price: 50},
+            {name: "ข้าวผัดทะเล", price: 60},
+            {name: "ข้าวผัดรวมมิตร", price: 70},
+            {name: "กะเพราหมู", price: 50},
+            {name: "กะเพราไก่", price: 50},
+            {name: "ไข่ดาว", price: 10},
+            {name: "ไข่เจียว", price: 15}
+        ];
+
+        // ตัวแปรเก็บสถานะ
+        let selectedTable = null;
+        let orders = [];
+
+        // -------------------------------
+        // 1. ระบบแสดงหน้าจอ
+        // -------------------------------
+        function showView(viewId) {
+            document.querySelectorAll('.app-view').forEach(el => el.classList.remove('active'));
+            document.getElementById(viewId).classList.add('active');
+        }
+
+        // -------------------------------
+        // 2. ระบบ Login ด้วย LINE LIFF
+        // -------------------------------
+        async function init() {
+            try {
+                await liff.init({ liffId: LIFF_ID });
+                
+                if (liff.isLoggedIn()) {
+                    const profile = await liff.getProfile();
+                    // แสดงข้อมูลโปรไฟล์
+                    document.getElementById("name").innerText = profile.displayName;
+                    document.getElementById("avatar").src = profile.pictureUrl;
+                    
+                    // เตรียมหน้าจอ POS
+                    createTables();
+                    renderMenu();
+                    showView('view-pos'); // สลับไปหน้า POS
+                } else {
+                    showView('view-splash'); // โชว์หน้า Login
+                }
+            } catch (err) {
+                console.error("LIFF Init Error:", err);
+                // โหมดทดสอบสำหรับเปิดบนคอมพิวเตอร์
+                document.getElementById("name").innerText = "โหมดทดสอบ";
+                createTables();
+                renderMenu();
+                showView('view-pos');
+            }
+        }
+
+        function login() {
+            if (!liff.isLoggedIn()) {
+                liff.login(); // ให้มันล็อกอินและกลับมาที่หน้าเดิม (Single File)
+            }
+        }
+
+        // -------------------------------
+        // 3. ระบบสร้างปุ่มโต๊ะ (Tables)
+        // -------------------------------
+        function createTables() {
+            const area = document.getElementById("tables");
+            area.innerHTML = ""; // ล้างข้อมูลเก่า
+
+            for (let i = 1; i <= 8; i++) {
+                let btn = document.createElement("button");
+                btn.className = "table-btn py-3 bg-white border border-slate-200 rounded-xl font-bold text-slate-700 shadow-sm active:scale-95 transition-all";
+                btn.innerText = "โต๊ะ " + i;
+
+                btn.onclick = () => {
+                    selectedTable = i;
+                    
+                    // ล้างสีปุ่มอื่น แล้วไฮไลท์ปุ่มที่เลือก
+                    document.querySelectorAll('.table-btn').forEach(el => {
+                        el.classList.remove('bg-[#2c3e50]', 'text-white', 'border-[#2c3e50]');
+                        el.classList.add('bg-white', 'text-slate-700');
+                    });
+                    btn.classList.remove('bg-white', 'text-slate-700');
+                    btn.classList.add('bg-[#2c3e50]', 'text-white', 'border-[#2c3e50]');
+                    
+                    alert("เลือกโต๊ะ " + i + " เรียบร้อย");
+                };
+                area.appendChild(btn);
+            }
+        }
+
+        // -------------------------------
+        // 4. ระบบแสดงเมนูอาหาร
+        // -------------------------------
+        function renderMenu() {
+            const area = document.getElementById("menu");
+            area.innerHTML = "";
+
+            menu.forEach((m, index) => {
+                let div = document.createElement("div");
+                // จัดสไตล์ให้ดูสวยงามเหมือนแอป
+                div.className = "bg-white p-4 rounded-xl border border-slate-200 flex justify-between items-center shadow-sm cursor-pointer active:bg-slate-50 transition-colors";
+                
+                div.innerHTML = `
+                    <span class="font-bold text-slate-800">${m.name}</span>
+                    <div class="flex items-center gap-3">
+                        <span class="text-[#ea580c] font-black">${m.price} ฿</span>
+                        <span class="bg-slate-100 text-slate-500 w-8 h-8 flex items-center justify-center rounded-lg font-bold">+</span>
+                    </div>
+                `;
+
+                div.onclick = () => addOrder(m);
+                area.appendChild(div);
+            });
+        }
+
+        // -------------------------------
+        // 5. ระบบตะกร้าและการชำระเงิน
+        // -------------------------------
+        function addOrder(m) {
+            orders.push(m);
+            renderOrders();
+        }
+
+        function renderOrders() {
+            const list = document.getElementById("orders");
+            list.innerHTML = "";
+
+            let total = 0;
+
+            if (orders.length === 0) {
+                list.innerHTML = '<li class="text-center text-slate-400 text-sm py-4">ยังไม่มีรายการสั่งอาหาร</li>';
+                document.getElementById("total").innerText = "0";
+                return;
+            }
+
+            orders.forEach((o, index) => {
+                let li = document.createElement("li");
+                li.className = "flex justify-between items-center bg-slate-50 p-3 rounded-lg border border-slate-100";
+                
+                li.innerHTML = `
+                    <span class="font-medium text-sm">${o.name}</span>
+                    <div class="flex items-center gap-3">
+                        <span class="font-bold">฿${o.price}</span>
+                        <button onclick="removeOrder(${index})" class="text-red-500 font-bold px-2 py-1 bg-red-50 rounded-md text-xs">ลบ</button>
+                    </div>
+                `;
+                
+                list.appendChild(li);
+                total += o.price;
+            });
+
+            document.getElementById("total").innerText = total;
+        }
+        
+        // ลบรายการในตะกร้า (ฟังก์ชันเสริมเพิ่มให้ใช้งานง่ายขึ้น)
+        function removeOrder(index) {
+            orders.splice(index, 1);
+            renderOrders();
+        }
+
+        function checkout() {
+            if (!selectedTable) {
+                alert("⚠️ กรุณาเลือกโต๊ะก่อนทำการสั่งอาหารครับ");
+                return;
+            }
+            if (orders.length === 0) {
+                alert("⚠️ ตะกร้าว่างเปล่า กรุณาเลือกอาหารครับ");
+                return;
+            }
+
+            let bill = "B" + Date.now().toString().slice(-6); // ย่อเลขบิลให้สั้นลง
+            alert(`✅ ชำระเงินสำเร็จ!\nเลขบิล: ${bill}\nโต๊ะ: ${selectedTable}\nยอดรวม: ${document.getElementById("total").innerText} บาท`);
+
+            // เคลียร์ข้อมูลหลัง Checkout
+            orders = [];
+            renderOrders();
+            selectedTable = null;
+            createTables(); // รีเซ็ตสีปุ่มโต๊ะ
+        }
+
+        // เริ่มต้นการทำงานเมื่อโหลดหน้าเว็บเสร็จ
+        init();
+
+    </script>
 </body>
 </html>
