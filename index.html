@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>หนูแดง อาหารตามสั่ง</title>
+    <title>หนูแดง อาหารตามสั่ง - Smart POS</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
@@ -58,6 +58,15 @@
         <div class="text-center">
             <div class="loader mb-4"></div>
             <p class="font-bold text-lg text-brand-primary animate-pulse" id="loader-text">กำลังโหลดระบบร้านหนูแดง...</p>
+        </div>
+    </div>
+
+    <div id="view-error" class="screen-view bg-slate-50 items-center justify-center p-6">
+        <div class="bg-white rounded-[2rem] p-8 text-center shadow-xl border border-red-100 w-full max-w-sm">
+            <div class="text-6xl mb-4">⚠️</div>
+            <h2 class="text-2xl font-black mb-2 text-brand-dark">โหลดข้อมูลไม่สำเร็จ</h2>
+            <p class="text-sm text-slate-500 mb-6" id="error-msg">อินเทอร์เน็ตอาจขัดข้อง กรุณาลองใหม่</p>
+            <button onclick="location.reload()" class="w-full py-4 bg-brand-dark text-white rounded-xl font-bold active:scale-95 shadow-lg">🔄 รีเฟรชหน้าเว็บ</button>
         </div>
     </div>
 
@@ -194,7 +203,7 @@
         </div>
     </div>
 
-    <div id="sys-modal-add" class="modal-bg no-print">
+    <div id="sys-modal-add" class="modal-bg no-print" onclick="if(event.target==this) closeModal('sys-modal-add')">
         <div class="modal-content hide-scrollbar overflow-y-auto">
             <div class="flex justify-between items-center mb-4">
                 <div><h3 id="mod-name" class="text-xl font-black text-brand-dark">ชื่อเมนู</h3><p class="text-brand-primary font-bold text-sm mt-1">เริ่มต้น ฿<span id="mod-price">0</span></p></div>
@@ -208,11 +217,11 @@
                 <span id="mod-qty" class="text-xl font-black text-brand-dark w-6 text-center">1</span>
                 <button onclick="adjQty(1)" class="text-2xl font-black text-brand-primary active:scale-95">+</button>
             </div>
-            <button onclick="confirmAddToCart()" class="w-full py-4.5 bg-brand-dark text-white rounded-2xl font-black text-lg active:scale-95 shadow-md">เพิ่มลงตะกร้า</button>
+            <button onclick="confirmAddToCart()" class="w-full py-4 bg-brand-dark text-white rounded-xl font-black text-lg active:scale-95 shadow-md">เพิ่มลงตะกร้า</button>
         </div>
     </div>
 
-    <div id="sys-modal-cart" class="modal-bg no-print">
+    <div id="sys-modal-cart" class="modal-bg no-print" onclick="if(event.target==this) closeModal('sys-modal-cart')">
         <div class="modal-content h-[80vh]">
             <div class="flex justify-between items-center mb-3 border-b border-slate-100 pb-3">
                 <h3 class="text-lg font-black text-brand-dark">🛒 ตะกร้า</h3>
@@ -225,15 +234,18 @@
             <div class="flex-1 overflow-y-auto hide-scrollbar space-y-2" id="cart-list"></div>
             <div class="pt-4 border-t border-slate-100">
                 <div class="flex justify-between items-end mb-4 px-1"><span class="font-bold text-slate-500 text-sm">ยอดรวม</span><span class="text-3xl font-black text-brand-primary">฿<span id="modal-cart-total-price">0</span></span></div>
-                <button onclick="submitOrder()" class="w-full py-4.5 bg-brand-dark text-brand-primary rounded-2xl font-black text-lg active:scale-95 shadow-xl">ส่งออเดอร์เข้าครัว</button>
+                <button onclick="submitOrder()" class="w-full py-4.5 bg-brand-primary text-white rounded-xl font-black text-lg active:scale-95 shadow-md">ส่งออเดอร์เข้าครัว</button>
             </div>
         </div>
     </div>
 
     <script>
-        // ----------------------------------------
-        // 1. ตัวแปรและข้อมูลพื้นฐาน (Global Variables)
-        // ----------------------------------------
+        // 🚨 1. ดักจับ Error แต่ไม่ล็อกหน้าจอ (เพื่อความเสถียร) 🚨
+        window.onerror = function(msg, url, line) {
+            console.error(`[System Error] ${msg} (Line: ${line})`);
+            return false; // ไม่ให้หน้าจอขาวโพลน
+        };
+
         const firebaseConfig = { apiKey: "AIzaSyAppTwYAQcvviSk_H8hwsRRHSB9Y0b5O6k", authDomain: "canva-ai-database-ledger-86b6c.firebaseapp.com", databaseURL: "https://canva-ai-database-ledger-86b6c-default-rtdb.asia-southeast1.firebasedatabase.app", projectId: "canva-ai-database-ledger-86b6c" };
         const LIFF_ID = "2009300498-iyTZochS";
 
@@ -263,9 +275,12 @@
         let voiceQueue = [];
         let isSpeaking = false;
         let announcedOrdersGlobal = new Set(); 
+        
+        // 🌟 เสียงแจ้งเตือนรายชั่วโมง (ไฟล์กระดิ่ง)
+        const hourlyChimeSound = new Audio('https://actions.google.com/sounds/v1/notifications/high_simple_chime.ogg');
 
         // ----------------------------------------
-        // 2. ฟังก์ชันพื้นฐาน (ประกาศไว้ล่วงหน้าเสมอ)
+        // 2. ฟังก์ชันพื้นฐาน 
         // ----------------------------------------
         function switchPage(pageId) {
             document.querySelectorAll('.screen-view').forEach(el => el.classList.remove('active'));
@@ -289,7 +304,7 @@
         }
 
         // ----------------------------------------
-        // 3. เริ่มต้นการทำงานเมื่อโหลดหน้า (Safe Boot)
+        // 3. เริ่มต้นการทำงานเมื่อโหลดหน้า 
         // ----------------------------------------
         window.onload = () => {
             try {
@@ -470,7 +485,7 @@
         }
 
         // ----------------------------------------
-        // 6. ตะกร้า & ส่งออเดอร์ (ปุ่มที่เคยมีปัญหา)
+        // 6. ตะกร้า & ส่งออเดอร์
         // ----------------------------------------
         function openCartModal(mode) {
             activeMode = mode;
@@ -509,7 +524,7 @@
             updateCartUI(); renderCartItems(); 
         }
 
-        // 🚨 ฟังก์ชันส่งออเดอร์ที่แข็งแกร่งที่สุด 🚨
+        // 🚨 ฟังก์ชันส่งออเดอร์ที่ถูกแก้บั๊ก 🚨
         function submitOrder() {
             let orderType = ""; let targetTable = ""; let pTime = "";
             let itemsToSubmit = [];
@@ -602,9 +617,9 @@
         }
 
         function selectPosTable(tableName) {
-            document.querySelectorAll('.pos-tbl-btn').forEach(btn => { btn.classList.remove('bg-brand-dark', 'text-brand-primary', 'border-brand-dark'); btn.classList.add('bg-slate-50', 'text-slate-600', 'border-slate-200'); });
+            document.querySelectorAll('.pos-tbl-btn').forEach(btn => { btn.classList.remove('bg-brand-dark', 'text-brand-primary'); btn.classList.add('bg-slate-50', 'text-slate-600'); });
             const sBtn = document.getElementById(`btn-tbl-${tableName}`);
-            if(sBtn) { sBtn.classList.remove('bg-slate-50', 'text-slate-600', 'border-slate-200'); sBtn.classList.add('bg-brand-dark', 'text-brand-primary', 'border-brand-dark'); }
+            if(sBtn) { sBtn.classList.remove('bg-slate-50', 'text-slate-600'); sBtn.classList.add('bg-brand-dark', 'text-brand-primary'); }
             const tp = document.getElementById('pos-type-input'); const tg = document.getElementById('pos-target-input');
             if (tableName === 'กลับบ้าน') { tp.value = 'takeaway'; tg.value = 'Walk-in (กลับบ้าน)'; } else { tp.value = 'dine-in'; tg.value = tableName; }
             togglePosTime();
@@ -629,14 +644,21 @@
         }
 
         // ----------------------------------------
-        // 9. KDS & ระบบเสียง (Global + Wake Lock)
+        // 9. KDS & ระบบเสียง (3 Step: รับทำ -> เสร็จ -> เสิร์ฟ)
         // ----------------------------------------
         async function enableAudioAndWakeLock() {
             isAudioReady = true;
             let wakeUp = new SpeechSynthesisUtterance("ระบบเสียงพร้อมทำงานค่ะ");
             wakeUp.lang = 'th-TH'; wakeUp.volume = 0.5;
             window.speechSynthesis.speak(wakeUp);
-            try { if ('wakeLock' in navigator) { let wakeLock = await navigator.wakeLock.request('screen'); document.addEventListener('visibilitychange', async () => { if (wakeLock !== null && document.visibilityState === 'visible') wakeLock = await navigator.wakeLock.request('screen'); }); } } catch (err) {}
+            try { 
+                // ปลดล็อกการเล่นไฟล์เสียงจาก Browser
+                hourlyChimeSound.play().then(() => { hourlyChimeSound.pause(); hourlyChimeSound.currentTime = 0; }).catch(()=>{});
+                if ('wakeLock' in navigator) { 
+                    let wakeLock = await navigator.wakeLock.request('screen'); 
+                    document.addEventListener('visibilitychange', async () => { if (wakeLock !== null && document.visibilityState === 'visible') wakeLock = await navigator.wakeLock.request('screen'); }); 
+                } 
+            } catch (err) {}
             const btn = document.getElementById('btn-global-audio'); if(btn) btn.style.display = 'none';
             showToast("🔊 ลำโพงทำงานและป้องกันหน้าจอดับแล้ว");
             checkGlobalOrdersForAudio(); renderKDS();
@@ -677,11 +699,15 @@
             window.speechSynthesis.speak(utterance);
         }
 
+        // 🌟 เสียงกระดิ่งบอกเวลาทุกชั่วโมง (ใช้ Audio File แทน TTS)
         let lastAnnouncedHour = -1;
         setInterval(() => {
-            if (!isAudioReady || !('speechSynthesis' in window)) return;
+            if (!isAudioReady) return;
             const now = new Date(); const h = now.getHours(); const m = now.getMinutes();
-            if (m === 0 && h !== lastAnnouncedHour) { lastAnnouncedHour = h; playVoiceAlert(`ติ๊ง ติ๊ง ติ๊ง. เทียบเวลา ขณะนี้เวลา ${h} นาฬิกา ตรง`); }
+            if (m === 0 && h !== lastAnnouncedHour) { 
+                lastAnnouncedHour = h; 
+                hourlyChimeSound.play().catch(e => console.log("Chime Error:", e));
+            }
         }, 1000);
 
         function renderKDS() {
@@ -712,9 +738,9 @@
                     <div class="bg-slate-50 p-2.5 rounded-xl mb-2 flex justify-between items-center border border-slate-100">
                         <div class="flex-1 pr-2"><div class="font-bold text-sm text-brand-dark">${i.name} <span class="text-brand-primary ml-1">x${i.qty}</span></div>${i.topping ? `<div class="text-[10px] text-brand-primary font-bold mt-1">🌟 ${i.topping}</div>` : ''}${i.note ? `<div class="text-[10px] text-red-500 font-bold mt-1">📌 ${i.note}</div>` : ''}</div>
                         <div>
-                            ${i.status === 'pending' ? `<button onclick="updateKDSItem('${g.tId}', '${i.oId}', 'preparing', ${queueNo})" class="bg-purple-500 text-white px-3 py-1.5 rounded-lg text-xs font-bold active:scale-95 shadow-sm">รับทำ</button>` : 
-                              i.status === 'preparing' ? `<button onclick="updateKDSItem('${g.tId}', '${i.oId}', 'ready', ${queueNo})" class="bg-blue-500 text-white px-3 py-1.5 rounded-lg text-xs font-bold active:scale-95 shadow-sm">เสร็จ</button>` :
-                              `<button onclick="updateKDSItem('${g.tId}', '${i.oId}', 'served', ${queueNo})" class="bg-emerald-500 text-white px-3 py-1.5 rounded-lg text-xs font-bold active:scale-95 shadow-sm">เสิร์ฟ</button>`}
+                            ${i.status === 'pending' ? `<button onclick="updateKDSItem('${g.tId}', '${i.oId}', 'preparing', ${queueNo})" class="bg-purple-500 text-white px-3 py-1.5 rounded-lg text-xs font-bold active:scale-95 shadow-sm">👨‍🍳 รับทำ</button>` : 
+                              i.status === 'preparing' ? `<button onclick="updateKDSItem('${g.tId}', '${i.oId}', 'ready', ${queueNo})" class="bg-blue-500 text-white px-3 py-1.5 rounded-lg text-xs font-bold active:scale-95 shadow-sm">🛎️ เสร็จ</button>` :
+                              `<button onclick="updateKDSItem('${g.tId}', '${i.oId}', 'served', ${queueNo})" class="bg-emerald-500 text-white px-3 py-1.5 rounded-lg text-xs font-bold active:scale-95 shadow-sm">✅ เสิร์ฟลูกค้า</button>`}
                         </div>
                     </div>`).join('');
 
@@ -740,6 +766,7 @@
                 let isTakeaway = false;
                 Object.values(allOrders[tId]).forEach(o => { if(o.type === 'takeaway' || o.type === 'preorder') isTakeaway = true; });
                 Object.keys(allOrders[tId]).forEach(oId => { if(allOrders[tId][oId].status !== 'served') db.ref(`orders/${tId}/${oId}`).update({status:'served'}); });
+
                 if(isTakeaway) playVoiceAlert(`อาหารทั้งหมด สำหรับรับกลับบ้านของคุณ ${tId} เรียบร้อยแล้วค่ะ เชิญมารับที่เคาน์เตอร์ ขอบคุณค่ะ`);
                 else playVoiceAlert(`อาหารทั้งหมดของ โต๊ะ ${tId} กำลังไปเสิร์ฟค่ะ`);
             }
